@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./image-chat.css";
 import { Mic, MicOff, Send } from "lucide-react";
+import outbackImg from "../assets/images/outback.jpg";
+
 
 export default function ImageChatbot() {
   const [messages, setMessages] = useState(() => ([
