@@ -107,6 +107,7 @@ chat_ns = api.namespace('chat', description='Chat and conversation endpoints')
 translate_ns = api.namespace('translate', description='Translation endpoints')
 ml2_ns = api.namespace('ml2', description='ML Model-2 prediction endpoints')
 ml1_ns = api.namespace('ml1', description='ML Model-1 triage endpoints')
+fusion_ns = api.namespace('fusion', description='Model fusion endpoints')
 
 # Define models for request/response documentation
 chat_request_model = api.model('ChatRequest', {
@@ -179,6 +180,27 @@ ml1_meta_response_model = api.model('ML1MetaResponse', {
     'has_disease_model': fields.Boolean(description='Whether disease model is available'),
     'severity_labels': fields.List(fields.String, description='Severity labels'),
     'disease_labels': fields.List(fields.String, description='Disease labels (if available)')
+})
+
+# ---------------- Fusion: Compare ML1 and ML2 ----------------
+fusion_request_model = api.model('FusionRequest', {
+    'input': fields.String(required=True, description='Free-form symptom description', example='Headache and nausea for two days'),
+    'topk': fields.Integer(description='Top-k diseases to return from ML1 (default 3)')
+})
+
+fusion_final_model = api.model('FusionFinal', {
+    'severity': fields.String(description='Final severity (from ML1)'),
+    'disease_label': fields.String(description='Chosen disease label'),
+    'probability': fields.Float(description='Chosen label probability'),
+    'source': fields.String(description="'ml1' or 'ml2'"),
+    'policy': fields.String(description='Decision policy used')
+})
+
+fusion_response_model = api.model('FusionResponse', {
+    'input': fields.String(description='Echoed input'),
+    'ml1': fields.Raw(description='Raw ML1 result'),
+    'ml2': fields.Raw(description='Raw ML2 result'),
+    'final': fields.Nested(fusion_final_model, description='Selected final result')
 })
 
 # ---------------- ML Model-2: Prediction API ----------------
@@ -299,6 +321,93 @@ class ML1Meta(Resource):
             api.abort(500, str(e))
         except Exception as e:
             api.abort(500, f"ML1 meta failed: {str(e)}")
+
+def _ml2_predict_from_text_freeform(text: str):
+    vectorizer, kmeans, q_table, label_encoder = _ml2_get_components()
+    X = vectorizer.transform([text])
+    state = int(kmeans.predict(X)[0])
+    q_values = q_table[state]
+    q_shift = q_values - float(np.max(q_values))
+    exp_q = np.exp(q_shift)
+    probs = exp_q / float(np.sum(exp_q))
+    best_idx = int(np.argmax(probs))
+    labels = label_encoder.inverse_transform(np.arange(len(probs)))
+    top_indices = list(np.argsort(-probs)[:3])
+    return {
+        'predicted_label': str(labels[best_idx]),
+        'probability': float(probs[best_idx]),
+        'top': [
+            {'label': str(labels[i]), 'probability': float(probs[i])}
+            for i in top_indices
+        ]
+    }
+
+@fusion_ns.route('/compare')
+class FusionCompare(Resource):
+    @fusion_ns.expect(fusion_request_model)
+    @fusion_ns.marshal_with(fusion_response_model)
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        text = (data.get('input') or data.get('text') or '').strip()
+        topk = data.get('topk')
+        if not text:
+            api.abort(400, "Provide JSON with 'input' or 'text'")
+
+        # Run ML1
+        try:
+            mod = _load_ml1_module()
+            kwargs = {}
+            if isinstance(topk, int) and topk > 0:
+                kwargs['topk_diseases'] = topk
+            ml1_res = mod.triage_predict(text, **kwargs)
+        except Exception as e:
+            api.abort(500, f"ML1 failed: {str(e)}")
+
+        # Run ML2
+        try:
+            ml2_res = _ml2_predict_from_text_freeform(text)
+        except Exception as e:
+            api.abort(500, f"ML2 failed: {str(e)}")
+
+        # Decision policy:
+        # - Severity comes from ML1 (it knows severity)
+        # - Disease label: compare ML1 top-1 (if available) vs ML2 top-1 by probability
+        policy = "ml1-severity + maxprob(disease from ml1 vs ml2)"
+        ml1_top1 = None
+        if isinstance(ml1_res, dict) and isinstance(ml1_res.get('disease_topk'), list) and len(ml1_res['disease_topk']) > 0:
+            d0 = ml1_res['disease_topk'][0]
+            ml1_top1 = {'label': d0.get('disease'), 'probability': d0.get('p', 0.0)}
+
+        ml2_top1 = None
+        if isinstance(ml2_res, dict) and isinstance(ml2_res.get('top'), list) and len(ml2_res['top']) > 0:
+            d0 = ml2_res['top'][0]
+            ml2_top1 = {'label': d0.get('label'), 'probability': d0.get('probability', 0.0)}
+
+        chosen = None
+        if ml1_top1 and ml2_top1:
+            chosen = ml1_top1 if ml1_top1['probability'] >= ml2_top1['probability'] else ml2_top1
+            chosen['source'] = 'ml1' if chosen is ml1_top1 else 'ml2'
+        elif ml1_top1:
+            chosen = {**ml1_top1, 'source': 'ml1'}
+        elif ml2_top1:
+            chosen = {**ml2_top1, 'source': 'ml2'}
+        else:
+            chosen = {'label': None, 'probability': 0.0, 'source': 'none'}
+
+        final = {
+            'severity': ml1_res.get('severity'),
+            'disease_label': chosen.get('label'),
+            'probability': chosen.get('probability'),
+            'source': chosen.get('source'),
+            'policy': policy
+        }
+
+        return {
+            'input': text,
+            'ml1': ml1_res,
+            'ml2': ml2_res,
+            'final': final
+        }
 
 
 # ---------------- Glossary loading ----------------
