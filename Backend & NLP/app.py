@@ -17,6 +17,10 @@ import uuid
 import sys
 import base64
 import io
+import joblib
+import numpy as np
+import importlib.util
+from pathlib import Path
 
 # Load environment variables
 load_dotenv()
@@ -101,6 +105,8 @@ WHISPER_MODEL = os.environ.get("WHISPER_MODEL", "base.en")
 # Create namespaces for API organization
 chat_ns = api.namespace('chat', description='Chat and conversation endpoints')
 translate_ns = api.namespace('translate', description='Translation endpoints')
+ml2_ns = api.namespace('ml2', description='ML Model-2 prediction endpoints')
+ml1_ns = api.namespace('ml1', description='ML Model-1 triage endpoints')
 
 # Define models for request/response documentation
 chat_request_model = api.model('ChatRequest', {
@@ -131,6 +137,168 @@ translate_response_model = api.model('TranslateResponse', {
     'translated_text': fields.String(description='Translated text'),
     'replaced_words': fields.List(fields.Raw, description='Words that were replaced')
 })
+
+# ---------------- ML Model-1: Triage API ----------------
+ML1_DIR = os.path.join(BASE_DIR, "Ml model-1")
+ML1_TRIAGE_MODULE_PATH = os.path.join(ML1_DIR, "triage_model.py")
+
+_ml1 = None
+
+def _load_ml1_module():
+    global _ml1
+    if _ml1 is not None:
+        return _ml1
+    if not os.path.exists(ML1_TRIAGE_MODULE_PATH):
+        raise FileNotFoundError(f"triage_model.py not found at {ML1_TRIAGE_MODULE_PATH}")
+    spec = importlib.util.spec_from_file_location("triage_model", ML1_TRIAGE_MODULE_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec and spec.loader
+    spec.loader.exec_module(mod)
+    _ml1 = mod
+    return _ml1
+
+ml1_predict_request_model = api.model('ML1PredictRequest', {
+    'input': fields.String(required=True, description='Free-form symptom description', example='I have chest pain and shortness of breath'),
+    'topk': fields.Integer(description='Top-k diseases to return (default 3)', example=3)
+})
+
+ml1_disease_item_model = api.model('ML1DiseaseItem', {
+    'disease': fields.String(description='Disease label'),
+    'p': fields.Float(description='Probability (0-1)')
+})
+
+ml1_predict_response_model = api.model('ML1PredictResponse', {
+    'severity': fields.String(description='Predicted severity'),
+    'confidence': fields.Float(description='Severity confidence (0-1)'),
+    'probs': fields.List(fields.Float, description='Severity probabilities (ordered as in model config)'),
+    'disease_topk': fields.List(fields.Nested(ml1_disease_item_model), description='Top-k diseases if available')
+})
+
+ml1_meta_response_model = api.model('ML1MetaResponse', {
+    'artifact_dir': fields.String(description='Artifact directory'),
+    'has_disease_model': fields.Boolean(description='Whether disease model is available'),
+    'severity_labels': fields.List(fields.String, description='Severity labels'),
+    'disease_labels': fields.List(fields.String, description='Disease labels (if available)')
+})
+
+# ---------------- ML Model-2: Prediction API ----------------
+# Uses components under 'Ml model-2/model_components': vectorizer, kmeans, q_table, label_encoder
+ML2_DIR = os.path.join(BASE_DIR, "Ml model-2")
+ML2_COMPONENTS_DIR = os.path.join(ML2_DIR, "model_components")
+ML2_VECTORIZER_PATH = os.path.join(ML2_COMPONENTS_DIR, "vectorizer.pkl")
+ML2_KMEANS_PATH = os.path.join(ML2_COMPONENTS_DIR, "kmeans.pkl")
+ML2_QTABLE_PATH = os.path.join(ML2_COMPONENTS_DIR, "q_table.npy")
+ML2_LABEL_ENCODER_PATH = os.path.join(ML2_COMPONENTS_DIR, "label_encoder.pkl")
+
+ml2_predict_request_model = api.model('ML2PredictRequest', {
+    'input': fields.String(required=True, description='Free-form symptom description string', example='I have severe headache and nausea for two days')
+})
+
+ml2_top_item_model = api.model('ML2TopItem', {
+    'label': fields.String(description='Predicted label'),
+    'probability': fields.Float(description='Softmax score over Q-values (0-1)')
+})
+
+ml2_predict_response_model = api.model('ML2PredictResponse', {
+    'predicted_label': fields.String(description='Top predicted label'),
+    'probability': fields.Float(description='Top softmax score (0-1)'),
+    'top': fields.List(fields.Nested(ml2_top_item_model), description='Top 3 predictions')
+})
+
+_ml2_vectorizer = None
+_ml2_kmeans = None
+_ml2_qtable = None
+_ml2_label_encoder = None
+
+def _ml2_get_components():
+    global _ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder
+    if all(x is not None for x in (_ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder)):
+        return _ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder
+    missing = []
+    for p in [ML2_VECTORIZER_PATH, ML2_KMEANS_PATH, ML2_QTABLE_PATH, ML2_LABEL_ENCODER_PATH]:
+        if not os.path.exists(p):
+            missing.append(p)
+    if missing:
+        raise FileNotFoundError(f"Missing ML2 components: {missing}")
+    _ml2_vectorizer = joblib.load(ML2_VECTORIZER_PATH)
+    _ml2_kmeans = joblib.load(ML2_KMEANS_PATH)
+    _ml2_qtable = np.load(ML2_QTABLE_PATH)
+    _ml2_label_encoder = joblib.load(ML2_LABEL_ENCODER_PATH)
+    return _ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder
+
+@ml2_ns.route('/predict')
+class ML2Predict(Resource):
+    @ml2_ns.expect(ml2_predict_request_model)
+    @ml2_ns.marshal_with(ml2_predict_response_model)
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        # Accept either 'input' or 'text'
+        input_text = (data.get('input') or data.get('text') or '').strip()
+        if not input_text:
+            api.abort(400, "Provide JSON with 'input' or 'text'")
+
+        try:
+            vectorizer, kmeans, q_table, label_encoder = _ml2_get_components()
+        except FileNotFoundError as e:
+            api.abort(500, str(e))
+
+        try:
+            X = vectorizer.transform([input_text])
+            state = int(kmeans.predict(X)[0])
+            q_values = q_table[state]
+            # Softmax over Q-values for relative scores
+            q_shift = q_values - float(np.max(q_values))
+            exp_q = np.exp(q_shift)
+            probs = exp_q / float(np.sum(exp_q))
+            best_idx = int(np.argmax(probs))
+            top_indices = list(np.argsort(-probs)[:3])
+            labels = label_encoder.inverse_transform(np.arange(len(probs)))
+        except Exception as e:
+            api.abort(500, f"Model inference failed: {str(e)}")
+
+        return {
+            'predicted_label': str(labels[best_idx]),
+            'probability': float(probs[best_idx]),
+            'top': [
+                {'label': str(labels[i]), 'probability': float(probs[i])}
+                for i in top_indices
+            ]
+        }
+
+@ml1_ns.route('/predict')
+class ML1Predict(Resource):
+    @ml1_ns.expect(ml1_predict_request_model)
+    @ml1_ns.marshal_with(ml1_predict_response_model)
+    def post(self):
+        data = request.get_json(silent=True) or {}
+        text = (data.get('input') or data.get('text') or '').strip()
+        topk = data.get('topk')
+        if not text:
+            api.abort(400, "Provide JSON with 'input' or 'text'")
+        try:
+            mod = _load_ml1_module()
+            kwargs = {}
+            if isinstance(topk, int) and topk > 0:
+                kwargs['topk_diseases'] = topk
+            result = mod.triage_predict(text, **kwargs)
+            return result
+        except FileNotFoundError as e:
+            api.abort(500, str(e))
+        except Exception as e:
+            api.abort(500, f"ML1 inference failed: {str(e)}")
+
+@ml1_ns.route('/meta')
+class ML1Meta(Resource):
+    @ml1_ns.marshal_with(ml1_meta_response_model)
+    def get(self):
+        try:
+            mod = _load_ml1_module()
+            meta = mod.triage_meta()
+            return meta
+        except FileNotFoundError as e:
+            api.abort(500, str(e))
+        except Exception as e:
+            api.abort(500, f"ML1 meta failed: {str(e)}")
 
 
 # ---------------- Glossary loading ----------------
