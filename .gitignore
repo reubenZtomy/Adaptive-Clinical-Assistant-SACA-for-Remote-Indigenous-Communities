@@ -1,0 +1,80 @@
+backup/Backend & NLP/app.py
+backup/Backend & NLP/db_manager.py
+backup/Backend & NLP/env_example.txt
+backup/Backend & NLP/models.py
+backup/Backend & NLP/README.md
+backup/Backend & NLP/requirements.txt
+backup/Backend & NLP/routes.py
+backup/Backend & NLP/setup.py
+backup/Backend & NLP/view_db.py
+backup/Backend & NLP/API_Endpoints/__init__.py
+backup/Backend & NLP/API_Endpoints/app.py
+backup/Backend & NLP/API_Endpoints/Chatbot/__init__.py
+backup/Backend & NLP/API_Endpoints/Chatbot/api.py
+backup/Backend & NLP/API_Endpoints/Chatbot/chat.py
+backup/Backend & NLP/API_Endpoints/Chatbot/data.pth
+backup/Backend & NLP/API_Endpoints/Chatbot/intents.json
+backup/Backend & NLP/API_Endpoints/Chatbot/model.py
+backup/Backend & NLP/API_Endpoints/Chatbot/nltk_utils.py
+backup/Backend & NLP/API_Endpoints/Chatbot/README.md
+backup/Backend & NLP/API_Endpoints/Chatbot/train.py
+backup/Backend & NLP/API_Endpoints/Chatbot/__pycache__/__init__.cpython-311.pyc
+backup/Backend & NLP/API_Endpoints/Chatbot/__pycache__/api.cpython-311.pyc
+backup/Backend & NLP/API_Endpoints/Chatbot/__pycache__/chat.cpython-311.pyc
+backup/Backend & NLP/API_Endpoints/Chatbot/__pycache__/model.cpython-311.pyc
+backup/Backend & NLP/API_Endpoints/Chatbot/__pycache__/nltk_utils.cpython-311.pyc
+backup/Backend & NLP/API_Endpoints/Glossary/arrernte_audio.csv
+backup/Backend & NLP/API_Endpoints/Glossary/glossary_translator.py
+backup/Backend & NLP/API_Endpoints/__pycache__/app.cpython-311.pyc
+backup/Backend & NLP/Chatbot/__init__.py
+backup/Backend & NLP/Chatbot/api.py
+backup/Backend & NLP/Chatbot/chat.py
+backup/Backend & NLP/Chatbot/data.pth
+backup/Backend & NLP/Chatbot/intents.json
+backup/Backend & NLP/Chatbot/model.py
+backup/Backend & NLP/Chatbot/nltk_utils.py
+backup/Backend & NLP/Chatbot/README.md
+backup/Backend & NLP/Chatbot/train.py
+backup/Backend & NLP/Chatbot/__pycache__/__init__.cpython-311.pyc
+backup/Backend & NLP/Chatbot/__pycache__/api.cpython-311.pyc
+backup/Backend & NLP/Chatbot/__pycache__/chat.cpython-311.pyc
+backup/Backend & NLP/Chatbot/__pycache__/model.cpython-311.pyc
+backup/Backend & NLP/Chatbot/__pycache__/nltk_utils.cpython-311.pyc
+backup/Backend & NLP/Glossary/arrernte_audio.csv
+backup/Backend & NLP/Glossary/glossary_translator.py
+backup/Backend & NLP/__pycache__/app.cpython-311.pyc
+backup/Backend & NLP/__pycache__/models.cpython-311.pyc
+backup/Backend & NLP/__pycache__/routes.cpython-311.pyc
+backup/Backend & NLP/instance/swinsaca.db
+backup/Frontend/.dockerignore
+backup/Frontend/.gitignore
+backup/Frontend/Dockerfile
+backup/Frontend/package-lock.json
+backup/Frontend/package.json
+backup/Frontend/react-router.config.ts
+backup/Frontend/README.md
+backup/Frontend/tsconfig.json
+backup/Frontend/vite.config.ts
+backup/Frontend/app/app.css
+backup/Frontend/app/root.tsx
+backup/Frontend/app/routes.ts
+backup/Frontend/app/components/Header.tsx
+backup/Frontend/app/components/SymptomSelector.tsx
+backup/Frontend/app/routes/chat.tsx
+backup/Frontend/app/routes/home.tsx
+backup/Frontend/app/routes/language.tsx
+backup/Frontend/app/routes/login.tsx
+backup/Frontend/app/routes/mode.tsx
+backup/Frontend/app/routes/profile.tsx
+backup/Frontend/app/routes/register.tsx
+backup/Frontend/app/utils/arrernte.ts
+backup/Frontend/app/utils/tts.ts
+backup/Frontend/app/welcome/logo-dark.svg
+backup/Frontend/app/welcome/logo-light.svg
+backup/Frontend/app/welcome/welcome.tsx
+backup/Frontend/public/arrernte_audio.csv
+backup/Frontend/public/favicon.ico
+backup/Frontend/public/audio/welcome/getstarted.mp3
+backup/Frontend/public/audio/welcome/mpe.mp3
+backup/Frontend/public/audio/welcome/Welcomemessage.mp3
+backup/Frontend/public/audio/welcome/Welcometitle.mp3
