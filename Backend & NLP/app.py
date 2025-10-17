@@ -34,6 +34,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///swi
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
 
+# --- Configure external model endpoints here ---
+ML1_URL = "http://localhost:5000/api/ml1/predict"   # kept for reference/logging
+ML2_URL = "http://localhost:5000/api/ml2/predict"   # kept for reference/logging
+FUSION_URL = "http://localhost:5000/api/fusion/compare"  # << updated
+
 # CORS Configuration
 CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173').split(',')
 
@@ -41,11 +46,13 @@ CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000,http://localhost
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
+
+# More permissive CORS for development
 CORS(app, 
-     resources={r"/*": {"origins": CORS_ORIGINS}}, 
+     resources={r"/*": {"origins": "*"}},  # Allow all origins for development
      supports_credentials=True,
-     allow_headers=["Content-Type", "Authorization", "X-Language", "X-Mode"],
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
+     allow_headers=["Content-Type", "Authorization", "X-Language", "X-Mode", "Accept", "Origin", "X-Requested-With"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"])
 
 # Initialize API with Swagger
 api = Api(
@@ -84,14 +91,14 @@ try:
     import pyttsx3
     from rapidfuzz import process, fuzz, distance
     HEAVY_DEPS_AVAILABLE = True
-    print("✅ [SUCCESS] All heavy dependencies loaded successfully!")
-    print("   - faster_whisper: ✅")
-    print("   - pydub: ✅") 
-    print("   - pyttsx3: ✅")
-    print("   - rapidfuzz: ✅")
+    print("[SUCCESS] All heavy dependencies loaded successfully!")
+    print("   - faster_whisper: OK")
+    print("   - pydub: OK") 
+    print("   - pyttsx3: OK")
+    print("   - rapidfuzz: OK")
 except ImportError as e:
     HEAVY_DEPS_AVAILABLE = False
-    print("❌ [ERROR] Some optional dependencies not available. Audio features will be limited.")
+    print("[ERROR] Some optional dependencies not available. Audio features will be limited.")
     print(f"   Import error: {str(e)}")
     print("   Please install missing dependencies with: pip install faster-whisper pydub pyttsx3 rapidfuzz")
 
@@ -268,6 +275,13 @@ class ML2Predict(Resource):
             X = vectorizer.transform([input_text])
             state = int(kmeans.predict(X)[0])
             q_values = q_table[state]
+            
+            # Fix dimension mismatch: Q-table has more actions than label encoder classes
+            # Truncate Q-values to match label encoder classes
+            num_classes = len(label_encoder.classes_)
+            if len(q_values) > num_classes:
+                q_values = q_values[:num_classes]
+            
             # Softmax over Q-values for relative scores
             q_shift = q_values - float(np.max(q_values))
             exp_q = np.exp(q_shift)
@@ -327,6 +341,13 @@ def _ml2_predict_from_text_freeform(text: str):
     X = vectorizer.transform([text])
     state = int(kmeans.predict(X)[0])
     q_values = q_table[state]
+    
+    # Fix dimension mismatch: Q-table has more actions than label encoder classes
+    # Truncate Q-values to match label encoder classes
+    num_classes = len(label_encoder.classes_)
+    if len(q_values) > num_classes:
+        q_values = q_values[:num_classes]
+    
     q_shift = q_values - float(np.max(q_values))
     exp_q = np.exp(q_shift)
     probs = exp_q / float(np.sum(exp_q))
@@ -442,21 +463,90 @@ load_csv()
 
 # ---------------- Speech model ----------------
 if HEAVY_DEPS_AVAILABLE:
-    print(f"🎤 [INFO] Loading Whisper model: {WHISPER_MODEL}")
+    print(f"[INFO] Loading Whisper model: {WHISPER_MODEL}")
     try:
         whisper_model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
-        print("✅ [SUCCESS] Whisper model loaded successfully!")
+        print("[SUCCESS] Whisper model loaded successfully!")
         print(f"   Model: {WHISPER_MODEL}")
         print(f"   Device: cpu")
         print(f"   Compute type: int8")
     except Exception as e:
-        print(f"❌ [ERROR] Failed to load Whisper model: {str(e)}")
+        print(f"[ERROR] Failed to load Whisper model: {str(e)}")
         import traceback
         traceback.print_exc()
         whisper_model = None
 else:
-    print("⚠️ [WARNING] Heavy dependencies not available, Whisper model not loaded")
+    print("[WARNING] Heavy dependencies not available, Whisper model not loaded")
     whisper_model = None
+
+def normalize_numbers_in_text(text: str) -> str:
+    """Normalize numbers in text for better processing."""
+    if not text:
+        return text
+    
+    # Simple number normalization - you can expand this as needed
+    import re
+    # Convert common number words to digits
+    number_map = {
+        'one': '1', 'two': '2', 'three': '3', 'four': '4', 'five': '5',
+        'six': '6', 'seven': '7', 'eight': '8', 'nine': '9', 'ten': '10'
+    }
+    
+    normalized = text.lower()
+    for word, digit in number_map.items():
+        normalized = normalized.replace(word, digit)
+    
+    return normalized
+
+def transcribe_audio_file(audio_file) -> str:
+    """Transcribe audio file to text using Whisper."""
+    if not HEAVY_DEPS_AVAILABLE or whisper_model is None:
+        return "Audio transcription not available"
+    
+    try:
+        # Save uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as tmp_file:
+            audio_file.save(tmp_file.name)
+            tmp_path = tmp_file.name
+        
+        # Transcribe using Whisper
+        segments, info = whisper_model.transcribe(tmp_path, beam_size=5)
+        
+        # Combine all segments
+        transcribed_text = ""
+        for segment in segments:
+            transcribed_text += segment.text + " "
+        
+        # Clean up temp file
+        os.unlink(tmp_path)
+        
+        return transcribed_text.strip()
+    except Exception as e:
+        print(f"[ERROR] Audio transcription failed: {str(e)}")
+        return "Transcription failed"
+
+def text_to_speech(text: str, language: str = "en") -> str:
+    """Convert text to speech and return audio URL."""
+    if not HEAVY_DEPS_AVAILABLE or not text:
+        return None
+    
+    try:
+        # Generate unique filename
+        audio_id = str(uuid.uuid4()).replace('-', '')
+        audio_filename = f"tts_{audio_id}.wav"
+        audio_path = os.path.join(BASE_DIR, "static", "audio", audio_filename)
+        
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(audio_path), exist_ok=True)
+        
+        # Generate TTS audio
+        tts_to_file(text, audio_path)
+        
+        # Return URL path
+        return f"/static/audio/{audio_filename}"
+    except Exception as e:
+        print(f"[ERROR] TTS generation failed: {str(e)}")
+        return None
 
 def choose_voice(engine):
     voices = engine.getProperty("voices")
@@ -532,59 +622,79 @@ def _apply_arrernte_glossary_to_reply(text: str):
     return mixed, replaced
 
 # ---------------- Disease Prediction Function ----------------
-def predict_disease_from_conversation(final_user_message, dialog_state):
+def predict_disease_from_conversation(final_user_message, dialog_state, conversation_history=None):
     """
     Predict disease based on conversation history and final user message.
     
-    TODO: Replace this function with actual model API call.
-    This is where you'll integrate your disease prediction model.
+    This function calls ML1, ML2, and Fusion APIs to get disease predictions.
     
     Args:
         final_user_message (str): The final message from the user
         dialog_state (dict): The current dialog state with collected information
+        conversation_history (list): Complete conversation history with user and assistant messages
     
     Returns:
-        dict: Disease prediction results
+        dict: Disease prediction results from the fusion API
     """
-    # TODO: Replace this with actual model API call
-    # Example structure for the API call:
-    # 
-    # import requests
-    # 
-    # # Prepare the data for the model
-    # model_input = {
-    #     "symptoms": final_user_message,
-    #     "dialog_state": dialog_state,
-    #     "conversation_history": "..."  # You might want to pass the full conversation
-    # }
-    # 
-    # # Call your model API
-    # response = requests.post("YOUR_MODEL_API_ENDPOINT", json=model_input)
-    # return response.json()
-    
-    # For now, return a mock prediction
-    return {
-        "predicted_diseases": [
-            {
-                "name": "Migraine",
-                "confidence": 0.75,
-                "description": "Severe headache with possible nausea and light sensitivity"
-            },
-            {
-                "name": "Tension Headache", 
-                "confidence": 0.60,
-                "description": "Mild to moderate headache often caused by stress"
-            }
-        ],
-        "recommendations": [
-            "Rest in a dark, quiet room",
-            "Apply cold compress to forehead",
-            "Consider over-the-counter pain relief",
-            "Consult a doctor if symptoms worsen"
-        ],
-        "severity": "moderate",
-        "urgency": "non-urgent"
-    }
+    try:
+        # Build summary from conversation history, dialog state, and final message
+        # Create a temporary instance to call the method
+        temp_instance = Chat()
+        summary = temp_instance._build_summary_for_models(dialog_state, final_user_message, conversation_history)
+        
+        print(f"[DEBUG] Calling ML APIs with summary: {summary}")
+        
+        # Call ML1 API
+        ml1_url = "http://localhost:5000/api/ml1/predict"
+        ml1_payload = {"input": summary, "topk": 3}
+        
+        print(f"[DEBUG] Calling ML1 API: {ml1_url}")
+        ml1_response = requests.post(ml1_url, json=ml1_payload, timeout=30)
+        ml1_result = ml1_response.json() if ml1_response.status_code == 200 else None
+        
+        if not ml1_result:
+            print(f"[ERROR] ML1 API failed: {ml1_response.status_code}")
+            return {"error": "ML1 API failed", "ml1_status": ml1_response.status_code}
+        
+        print(f"[DEBUG] ML1 result: {ml1_result}")
+        
+        # Call ML2 API
+        ml2_url = "http://localhost:5000/api/ml2/predict"
+        ml2_payload = {"input": summary}
+        
+        print(f"[DEBUG] Calling ML2 API: {ml2_url}")
+        ml2_response = requests.post(ml2_url, json=ml2_payload, timeout=30)
+        ml2_result = ml2_response.json() if ml2_response.status_code == 200 else None
+        
+        if not ml2_result:
+            print(f"[ERROR] ML2 API failed: {ml2_response.status_code}")
+            return {"error": "ML2 API failed", "ml2_status": ml2_response.status_code}
+        
+        print(f"[DEBUG] ML2 result: {ml2_result}")
+        
+        # Call Fusion API
+        fusion_url = "http://localhost:5000/api/fusion/compare"
+        fusion_payload = {"input": summary, "topk": 3}
+        
+        print(f"[DEBUG] Calling Fusion API: {fusion_url}")
+        fusion_response = requests.post(fusion_url, json=fusion_payload, timeout=30)
+        fusion_result = fusion_response.json() if fusion_response.status_code == 200 else None
+        
+        if not fusion_result:
+            print(f"[ERROR] Fusion API failed: {fusion_response.status_code}")
+            return {"error": "Fusion API failed", "fusion_status": fusion_response.status_code}
+        
+        print(f"[DEBUG] Fusion result: {fusion_result}")
+        
+        # Return the fusion result (which contains ml1, ml2, and final predictions)
+        return fusion_result
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[ERROR] API request failed: {str(e)}")
+        return {"error": f"API request failed: {str(e)}"}
+    except Exception as e:
+        print(f"[ERROR] Unexpected error in predict_disease_from_conversation: {str(e)}")
+        return {"error": f"Unexpected error: {str(e)}"}
 
 # ---------------- Routes ----------------
 @app.route("/health", methods=["GET"])
@@ -615,117 +725,310 @@ class Chat(Resource):
     @chat_ns.marshal_with(chat_response_model)
     def post(self):
         """Chat with the SwinSACA medical assistant - handles both text and voice input"""
-        # Check if this is a voice input (FormData with audio file)
         if request.content_type and 'multipart/form-data' in request.content_type:
             return self._handle_voice_input()
         else:
             return self._handle_text_input()
-    
+
+    # ------------------------------- #
+    # Helpers for summary + HTTP I/O  #
+    # ------------------------------- #
+    def _build_summary_for_models(self, state_copy: dict, latest_user_text: str, conversation_history: list = None) -> str:
+        """Build a comprehensive summary from conversation history, dialog state slots, and latest user text."""
+        try:
+            # First check if there's an explicit summary in the state
+            state_summary = (state_copy or {}).get("summary") or ""
+            if isinstance(state_summary, str) and state_summary.strip():
+                return state_summary.strip()
+
+            summary_parts = []
+            
+            # Add complete conversation history if available
+            if conversation_history and len(conversation_history) > 0:
+                conversation_text = []
+                for msg in conversation_history:
+                    if isinstance(msg, dict):
+                        role = msg.get("role", "")
+                        content = msg.get("content", "")
+                        if role and content:
+                            conversation_text.append(f"{role}: {content}")
+                    elif isinstance(msg, str):
+                        conversation_text.append(msg)
+                
+                if conversation_text:
+                    full_conversation = " | ".join(conversation_text)
+                    summary_parts.append(f"Complete conversation history: {full_conversation}")
+
+            # Build summary from dialog state slots
+            slots = (state_copy or {}).get("slots", {})
+            active_domain = (state_copy or {}).get("active_domain")
+            stage = (state_copy or {}).get("stage")
+            
+            if active_domain and slots:
+                # Add domain context
+                summary_parts.append(f"Patient reporting {active_domain} symptoms.")
+                
+                # Add slot information based on domain
+                if active_domain == "fever":
+                    if "duration" in slots:
+                        summary_parts.append(f"Fever duration: {slots['duration']}")
+                    if "temperature" in slots:
+                        summary_parts.append(f"Maximum temperature: {slots['temperature']}")
+                    if "assoc" in slots and slots["assoc"]:
+                        summary_parts.append(f"Associated symptoms: {', '.join(slots['assoc'])}")
+                        
+                elif active_domain == "headache":
+                    if "duration" in slots:
+                        summary_parts.append(f"Headache duration: {slots['duration']}")
+                    if "severity" in slots:
+                        summary_parts.append(f"Pain severity: {slots['severity']}")
+                    if "location" in slots:
+                        summary_parts.append(f"Pain location: {slots['location']}")
+                    if "assoc" in slots and slots["assoc"]:
+                        summary_parts.append(f"Associated symptoms: {', '.join(slots['assoc'])}")
+                        
+                elif active_domain == "cough":
+                    if "type" in slots:
+                        summary_parts.append(f"Cough type: {slots['type']}")
+                    if "duration" in slots:
+                        summary_parts.append(f"Cough duration: {slots['duration']}")
+                    if "sputum_color" in slots:
+                        summary_parts.append(f"Sputum color: {slots['sputum_color']}")
+                    if "red_flags" in slots and slots["red_flags"]:
+                        summary_parts.append(f"Respiratory red flags: {', '.join(slots['red_flags'])}")
+                        
+                elif active_domain == "stomach":
+                    if "duration" in slots:
+                        summary_parts.append(f"Stomach issue duration: {slots['duration']}")
+                    if "severity" in slots:
+                        summary_parts.append(f"Pain severity: {slots['severity']}")
+                    if "location" in slots:
+                        summary_parts.append(f"Pain location: {slots['location']}")
+                    if "assoc" in slots and slots["assoc"]:
+                        summary_parts.append(f"Associated symptoms: {', '.join(slots['assoc'])}")
+                        
+                elif active_domain == "fatigue":
+                    if "duration" in slots:
+                        summary_parts.append(f"Fatigue duration: {slots['duration']}")
+                    if "severity" in slots:
+                        summary_parts.append(f"Fatigue severity: {slots['severity']}")
+                    if "assoc" in slots and slots["assoc"]:
+                        summary_parts.append(f"Associated symptoms: {', '.join(slots['assoc'])}")
+                        
+                elif active_domain == "skin":
+                    if "duration" in slots:
+                        summary_parts.append(f"Skin issue duration: {slots['duration']}")
+                    if "location" in slots:
+                        summary_parts.append(f"Affected area: {slots['location']}")
+                    if "appearance" in slots:
+                        summary_parts.append(f"Skin appearance: {slots['appearance']}")
+                    if "assoc" in slots and slots["assoc"]:
+                        summary_parts.append(f"Associated symptoms: {', '.join(slots['assoc'])}")
+
+            # Add latest user text if available
+            if latest_user_text and latest_user_text.strip():
+                summary_parts.append(f"Latest user input: {latest_user_text.strip()}")
+
+            # Combine all parts
+            if summary_parts:
+                full_summary = " ".join(summary_parts)
+                # Limit to reasonable length for ML models (increased to accommodate conversation history)
+                return full_summary[:2000]
+            else:
+                # Fallback to latest user text
+                text = (latest_user_text or "").strip()
+                if not text:
+                    return "No clear user summary available."
+                return " ".join(text.split())[:800]
+                
+        except Exception as e:
+            print(f"[ERROR] Error building summary: {str(e)}")
+            # Fallback to latest user text
+            text = (latest_user_text or "").strip()
+            if not text:
+                return "No clear user summary available."
+            return " ".join(text.split())[:800]
+
+    def _post_json(self, url: str, payload: dict, timeout: int = 10) -> dict:
+        """POST JSON with robust error handling; returns {ok, json|error, status, body?}."""
+        try:
+            resp = requests.post(url, json=payload, timeout=timeout)
+            ct = resp.headers.get("Content-Type", "")
+            if resp.ok:
+                try:
+                    return {"ok": True, "json": resp.json(), "status": resp.status_code}
+                except Exception:
+                    return {"ok": True, "json": {"_raw_text": resp.text}, "status": resp.status_code}
+            else:
+                import json
+                body = resp.text if "application/json" not in ct else json.dumps(resp.json(), ensure_ascii=False)
+                return {"ok": False, "error": f"HTTP {resp.status_code}", "body": body, "status": resp.status_code}
+        except requests.Timeout:
+            return {"ok": False, "error": "timeout", "body": None, "status": None}
+        except requests.ConnectionError as ce:
+            return {"ok": False, "error": f"connection_error: {ce}", "body": None, "status": None}
+        except Exception as e:
+            return {"ok": False, "error": f"unexpected_error: {e}", "body": None, "status": None}
+
+    def _call_fusion_compare(self, summary_text: str, topk: int = 3) -> dict:
+        """
+        Fusion/compare expects:
+          Input: {"input": "<summary>", "topk": 3}
+          Output (example): {
+            "input": "...",
+            "ml1": {...},     # includes severity, probs, disease_topk, etc.
+            "ml2": {...},     # includes predicted_label, probability, top[]
+            "final": {...}    # fused decision
+          }
+        """
+        print(f"[DEBUG] Calling fusion/compare API with summary:")
+        print(f"   Summary text: {summary_text[:200]}...")
+        print(f"   URL: {FUSION_URL}")
+        
+        payload = {"input": summary_text, "topk": int(topk)}
+        result = self._post_json(FUSION_URL, payload)
+        
+        print(f"[DEBUG] Fusion API response:")
+        print(f"   Success: {result.get('ok')}")
+        print(f"   Status: {result.get('status')}")
+        if not result.get('ok'):
+            print(f"   Error: {result.get('error')}")
+            print(f"   Body: {result.get('body')}")
+        
+        return result
+
+    # -------------------- #
+    # Voice input handling #
+    # -------------------- #
     def _handle_voice_input(self):
-        """Handle voice input - transcribe audio and process"""
-        # Initialize variables
         audio_file = None
         lang = "english"
         mode = "voice"
-        
+
         try:
-            # Log all request data for debugging
             print(f"[DEBUG] Voice chat request received:")
             print(f"   Content-Type: {request.content_type}")
             print(f"   Files: {list(request.files.keys())}")
             print(f"   Form data: {dict(request.form)}")
             print(f"   Headers: {dict(request.headers)}")
-            
-            # Check if audio file is present
+
             if 'audio' not in request.files:
                 print("[ERROR] No audio file in request.files")
                 api.abort(400, "No audio file provided")
-            
+
             audio_file = request.files['audio']
             print(f"[DEBUG] Audio file details:")
             print(f"   Filename: '{audio_file.filename}'")
             print(f"   Content type: {audio_file.content_type}")
             print(f"   MIME type: {audio_file.mimetype}")
-            
-            # Read the file content to check size
+
             audio_content = audio_file.read()
-            audio_file.seek(0)  # Reset file pointer
+            audio_file.seek(0)
             print(f"   Size: {len(audio_content)} bytes")
-            
-            if not audio_file.filename or audio_file.filename == '':
+
+            if not audio_file.filename:
                 print("[ERROR] Audio file has no filename")
                 api.abort(400, "No audio file selected")
-            
             if len(audio_content) == 0:
                 print("[ERROR] Audio file is empty")
                 api.abort(400, "Audio file is empty")
-            
-            # Get language and mode from headers or form data
+
             lang_raw = (request.headers.get("X-Language") or request.form.get("language") or "english").lower()
             mode = (request.headers.get("X-Mode") or request.form.get("mode") or "voice").lower()
-            
-            # Normalize language codes
+
             if lang_raw in ["en", "english"]:
                 lang = "english"
             elif lang_raw in ["arr", "arrernte"]:
                 lang = "arrernte"
             else:
                 lang = lang_raw
-            
+
             print(f"   Final lang: {lang}")
             print(f"   Final mode: {mode}")
-            
+
         except Exception as e:
             print(f"[ERROR] Exception in voice chat endpoint: {str(e)}")
             api.abort(500, f"Internal server error: {str(e)}")
-        
-        # Check if it's English and voice mode
+
         if lang == "english" and mode == "voice":
             try:
-                # Transcribe audio to text using the transcribe API
                 transcribed_text = self._call_transcribe_api(audio_file)
                 print(f"[DEBUG] Transcribed text from API: {transcribed_text}")
-                
-                # Normalize numbers in the transcribed text for better chatbot recognition
+
                 normalized_text = normalize_numbers_in_text(transcribed_text)
                 print(f"[DEBUG] Normalized text for chatbot: {normalized_text}")
-                
-                # Process the normalized text through the chat system
+
                 user_msg_for_bot = normalized_text
-                input_replaced = []
-                
-                # Route message through the chat system
+
+                # Route message through your existing chat logic
                 bot_reply_english = route_message(user_msg_for_bot)
                 state_copy = _copy_state()
-                
-                # Post-process bot reply to Arrernte if client requested Arrernte
+
                 replaced_out = []
                 final_reply = bot_reply_english
                 if lang == "arrernte":
                     final_reply, replaced_out = _apply_arrernte_glossary_to_reply(bot_reply_english)
-                
-                # Check if this is a final message for disease prediction
+
                 is_final_message = False
                 disease_prediction = None
+                summary_text = None
+                ml1_json = None
+                ml2_json = None
+                fused_json = None
+                fusion_resp = None
                 
-                if "summary" in bot_reply_english.lower() or "assessment" in bot_reply_english.lower() or "Thanks for the details" in bot_reply_english:
+                if ("summary" in bot_reply_english.lower()
+                        or "assessment" in bot_reply_english.lower()
+                        or "Thanks for the details" in bot_reply_english):
                     is_final_message = True
-                    disease_prediction = predict_disease_from_conversation(user_msg_for_bot, state_copy)
-                
-                # Generate audio response
+                    disease_prediction = predict_disease_from_conversation(user_msg_for_bot, state_copy, None)  # Voice input doesn't have conversation history yet
+                    
+                    # ---------- Call ML models only for final messages ----------
+                    print(f"[DEBUG] Final message detected - calling ML models:")
+                    print(f"   Dialog state: {state_copy}")
+                    print(f"   Latest user text: {user_msg_for_bot}")
+                    
+                    summary_text = self._build_summary_for_models(state_copy, user_msg_for_bot)
+                    print(f"   Generated summary: {summary_text}")
+                    
+                    fusion_resp = self._call_fusion_compare(summary_text, topk=3)
+                    fused_json = fusion_resp.get("json") if fusion_resp.get("ok") else {
+                        "error": fusion_resp.get("error"),
+                        "body": fusion_resp.get("body")
+                    }
+
+                    # Extract ml1/ml2 blocks if present (for convenience in your UI)
+                    ml1_json = (fused_json or {}).get("ml1")
+                    ml2_json = (fused_json or {}).get("ml2")
+                else:
+                    print(f"[DEBUG] Not a final message - skipping ML model calls")
+
                 audio_url = text_to_speech(final_reply, "en")
-                
+
                 return {
                     "reply": final_reply,
-                    "transcribed_text": transcribed_text,  # Original transcribed text
-                    "normalized_text": normalized_text,    # Normalized text sent to chatbot
+                    "transcribed_text": transcribed_text,
+                    "normalized_text": normalized_text,
                     "context": {"language": lang, "mode": mode},
                     "replaced_words": replaced_out,
                     "state": state_copy,
                     "bot": bot_name,
                     "is_final_message": is_final_message,
                     "disease_prediction": disease_prediction,
-                    "audio_url": audio_url
+                    "audio_url": audio_url,
+
+                    # --- Model fusion outputs ---
+                    "summary_for_models": summary_text,
+                    "ml1_result": ml1_json,
+                    "ml2_result": ml2_json,
+                    "fused_result": fused_json,
+                    "model_calls": {
+                        "fusion_compare": {
+                            "url": FUSION_URL,
+                            "ok": fusion_resp.get("ok") if fusion_resp else False,
+                            "status": fusion_resp.get("status") if fusion_resp else None
+                        }
+                    },
                 }
             except Exception as e:
                 print(f"[ERROR] Error processing voice chat: {str(e)}")
@@ -734,29 +1037,16 @@ class Chat(Resource):
                 api.abort(500, f"Error processing voice message: {str(e)}")
         else:
             api.abort(400, f"Voice chat only supports English language and voice mode. Received: lang={lang}, mode={mode}")
-    
+
     def _call_transcribe_api(self, audio_file):
-        """
-        Call the transcribe API internally to get transcribed text.
-        
-        Args:
-            audio_file: The audio file to transcribe
-            
-        Returns:
-            str: Transcribed text
-        """
         try:
             print(f"[DEBUG] Calling transcribe API for audio file: {audio_file.filename}")
-            
-            # Create a mock request context for the transcribe endpoint
-            with app.test_request_context('/api/chat/transcribe', 
-                                        method='POST',
-                                        data={'audio': audio_file},
-                                        content_type='multipart/form-data'):
-                # Create and call the Transcribe resource
+            with app.test_request_context('/api/chat/transcribe',
+                                          method='POST',
+                                          data={'audio': audio_file},
+                                          content_type='multipart/form-data'):
                 transcribe_resource = Transcribe()
                 result = transcribe_resource.post()
-                
                 if isinstance(result, dict) and 'text' in result:
                     transcribed_text = result['text']
                     print(f"[DEBUG] Transcribe API returned: '{transcribed_text}'")
@@ -764,30 +1054,29 @@ class Chat(Resource):
                 else:
                     print(f"[ERROR] Unexpected transcribe API response: {result}")
                     return "I have a headache and feel dizzy"
-                    
         except Exception as e:
             print(f"[ERROR] Failed to call transcribe API: {str(e)}")
             import traceback
             traceback.print_exc()
-            # Fallback to direct transcription
-            return transcribe_audio_to_text(audio_file)
-    
+            return transcribe_audio_file(audio_file)
+
+    # ------------------- #
+    # Text input handling #
+    # ------------------- #
     def _handle_text_input(self):
-        """Handle text input - original chat functionality"""
         data = request.get_json(silent=True) or {}
         user_msg_raw = (data.get("message") or "").strip()
         if not user_msg_raw:
             api.abort(400, "Provide JSON with 'message'")
 
-        # Optional: reset dialog flow
         if data.get("reset"):
             reset_state()
 
         ctx = data.get("_context") or {}
         lang = (request.headers.get("X-Language") or ctx.get("language") or "english").lower()
         mode = (request.headers.get("X-Mode") or ctx.get("mode") or "text").lower()
-        
-        # Log received session variables for debugging
+        conversation_history = data.get("conversation_history", [])
+
         print(f"[DEBUG] Received session variables:")
         print(f"   X-Language header: {request.headers.get('X-Language')}")
         print(f"   X-Mode header: {request.headers.get('X-Mode')}")
@@ -796,248 +1085,80 @@ class Chat(Resource):
         print(f"   Final lang: {lang}")
         print(f"   Final mode: {mode}")
         print(f"   User message: {user_msg_raw}")
+        print(f"   Conversation history length: {len(conversation_history)}")
 
-        # ---------- 1) Pre-translate user input if client says it's Arrernte ----------
         user_msg_for_bot = user_msg_raw
         input_replaced = []
         if lang == "arrernte":
-            # Simple translation for now - can be enhanced later
             user_msg_for_bot, input_replaced = translate_arr_to_english_simple(user_msg_raw)
 
-        # ---------- 2) Route message (in English if we just translated) ----------
         bot_reply_english = route_message(user_msg_for_bot)
         state_copy = _copy_state()
 
-        # ---------- 3) Post-process bot reply to Arrernte if client requested Arrernte ----------
         replaced_out = []
         final_reply = bot_reply_english
         if lang == "arrernte":
             final_reply, replaced_out = _apply_arrernte_glossary_to_reply(bot_reply_english)
 
-        # ---------- 4) Check if this is a final message for disease prediction ----------
         is_final_message = False
         disease_prediction = None
+        summary_text = None
+        ml1_json = None
+        ml2_json = None
+        fused_json = None
+        fusion_resp = None
         
-        # Check if the bot is asking for more details (indicating we're in the assessment phase)
         if "Thanks—please tell me a bit more so I can assess this carefully" in bot_reply_english:
-            # This is the trigger message - the next user message will be the final one
-            # We'll mark this in the response so the frontend knows to expect a final message
             pass
-        elif "summary" in bot_reply_english.lower() or "assessment" in bot_reply_english.lower() or "Thanks for the details" in bot_reply_english:
-            # This indicates we're at the end of the conversation
+        elif ("summary" in bot_reply_english.lower()
+              or "assessment" in bot_reply_english.lower()
+              or "Thanks for the details" in bot_reply_english):
             is_final_message = True
+            disease_prediction = predict_disease_from_conversation(user_msg_for_bot, state_copy, conversation_history)
             
-            # Collect all user messages for disease prediction
-            # TODO: Replace this with actual model API call
-            # For now, we'll simulate the process
-            disease_prediction = predict_disease_from_conversation(user_msg_for_bot, state_copy)
+            # ---------- Call ML models only for final messages ----------
+            print(f"[DEBUG] Final message detected - calling ML models (text input):")
+            print(f"   Dialog state: {state_copy}")
+            print(f"   Latest user text: {user_msg_for_bot}")
+            
+            summary_text = self._build_summary_for_models(state_copy, user_msg_for_bot)
+            print(f"   Generated summary: {summary_text}")
+            
+            fusion_resp = self._call_fusion_compare(summary_text, topk=3)
+            fused_json = fusion_resp.get("json") if fusion_resp.get("ok") else {
+                "error": fusion_resp.get("error"),
+                "body": fusion_resp.get("body")
+            }
+            ml1_json = (fused_json or {}).get("ml1")
+            ml2_json = (fused_json or {}).get("ml2")
+        else:
+            print(f"[DEBUG] Not a final message - skipping ML model calls (text input)")
 
         return {
             "reply": final_reply,
-            "transcribed_text": None,  # No transcription for text mode
-            "normalized_text": None,   # No normalization for text mode
+            "transcribed_text": None,
+            "normalized_text": None,
             "context": {"language": lang, "mode": mode},
-            "replaced_words": replaced_out,   # replacements made in BOT reply (EN → Arr)
+            "replaced_words": replaced_out,
             "state": state_copy,
             "bot": bot_name,
             "is_final_message": is_final_message,
             "disease_prediction": disease_prediction,
-            "audio_url": None  # No audio for text mode
+
+            # --- Model fusion outputs ---
+            "summary_for_models": summary_text,
+            "ml1_result": ml1_json,
+            "ml2_result": ml2_json,
+            "fused_result": fused_json,
+            "model_calls": {
+                "fusion_compare": {
+                    "url": FUSION_URL,
+                    "ok": fusion_resp.get("ok") if fusion_resp else False,
+                    "status": fusion_resp.get("status") if fusion_resp else None
+                }
+            },
+            "audio_url": None
         }
-
-def transcribe_audio_file(audio_file):
-    """
-    Shared transcription function used by both /transcribe endpoint and /chat endpoint.
-    
-    Args:
-        audio_file: The audio file to transcribe
-        
-    Returns:
-        str: Transcribed text
-    """
-    try:
-        print(f"[DEBUG] Transcription attempt - HEAVY_DEPS_AVAILABLE: {HEAVY_DEPS_AVAILABLE}")
-        print(f"[DEBUG] Whisper model status: {whisper_model is not None}")
-        print(f"[DEBUG] Audio file details: {audio_file.filename}, {audio_file.content_type}")
-        
-        if not HEAVY_DEPS_AVAILABLE:
-            print("[WARNING] Heavy dependencies not available, using mock transcription")
-            return "I have a headache and feel dizzy"
-            
-        if whisper_model is None:
-            print("[WARNING] Whisper model is None, using mock transcription")
-            return "I have a headache and feel dizzy"
-        
-        # Save the audio file to a temporary location
-        suffix = os.path.splitext(audio_file.filename)[1] if audio_file.filename else ".webm"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp_file:
-            audio_file.save(temp_file.name)
-            temp_path = temp_file.name
-        
-        try:
-            # Convert to WAV format for better Whisper compatibility
-            wav_path = temp_path.replace(suffix, '.wav')
-            try:
-                if HEAVY_DEPS_AVAILABLE:
-                    from pydub import AudioSegment
-                    # Load the audio file
-                    audio = AudioSegment.from_file(temp_path)
-                    # Export as WAV
-                    audio.export(wav_path, format="wav")
-                    print(f"[DEBUG] Converted audio to WAV: {wav_path}")
-                    # Use the WAV file for transcription
-                    transcription_path = wav_path
-                else:
-                    print("[WARNING] pydub not available, using original format")
-                    transcription_path = temp_path
-            except Exception as e:
-                print(f"[WARNING] Audio conversion failed: {str(e)}, using original format")
-                transcription_path = temp_path
-            
-            # Transcribe using Whisper
-            print(f"[DEBUG] Transcribing audio file: {transcription_path}")
-            print(f"[DEBUG] Audio file size: {os.path.getsize(transcription_path)} bytes")
-            
-            segments, info = whisper_model.transcribe(transcription_path, language="en")
-            print(f"[DEBUG] Whisper info: {info}")
-            
-            # Combine all segments into a single text
-            transcribed_text = ""
-            segment_count = 0
-            for segment in segments:
-                print(f"[DEBUG] Segment {segment_count}: '{segment.text}' (start: {segment.start}, end: {segment.end})")
-                transcribed_text += segment.text + " "
-                segment_count += 1
-            
-            transcribed_text = transcribed_text.strip()
-            print(f"[DEBUG] Whisper transcription result: '{transcribed_text}'")
-            print(f"[DEBUG] Total segments processed: {segment_count}")
-            
-            # If transcription is empty or too short, use a fallback
-            if not transcribed_text or len(transcribed_text.strip()) < 2:
-                print("[WARNING] Whisper returned empty or very short transcription")
-                return "I have a headache and feel dizzy"
-            
-            return transcribed_text
-            
-        finally:
-            # Clean up temporary files
-            try:
-                os.unlink(temp_path)
-            except:
-                pass
-            try:
-                if 'wav_path' in locals() and os.path.exists(wav_path):
-                    os.unlink(wav_path)
-            except:
-                pass
-                
-    except Exception as e:
-        print(f"[ERROR] Transcription failed: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        # Fallback to mock transcription
-        return "I have a headache and feel dizzy"
-
-def transcribe_audio_to_text(audio_file):
-    """
-    Wrapper function for backward compatibility.
-    """
-    return transcribe_audio_file(audio_file)
-
-def normalize_numbers_in_text(text):
-    """
-    Convert written numbers to digits for better chatbot recognition.
-    
-    Args:
-        text: Input text that may contain written numbers
-        
-    Returns:
-        str: Text with numbers normalized to digits
-    """
-    if not text:
-        return text
-    
-    # Dictionary mapping written numbers to digits
-    number_mapping = {
-        'zero': '0', 'one': '1', 'two': '2', 'three': '3', 'four': '4',
-        'five': '5', 'six': '6', 'seven': '7', 'eight': '8', 'nine': '9',
-        'ten': '10', 'eleven': '11', 'twelve': '12', 'thirteen': '13',
-        'fourteen': '14', 'fifteen': '15', 'sixteen': '16', 'seventeen': '17',
-        'eighteen': '18', 'nineteen': '19', 'twenty': '20', 'thirty': '30',
-        'forty': '40', 'fifty': '50', 'sixty': '60', 'seventy': '70',
-        'eighty': '80', 'ninety': '90', 'hundred': '100'
-    }
-    
-    # Time-related mappings
-    time_mappings = {
-        'one day': '1 day', 'two days': '2 days', 'three days': '3 days',
-        'four days': '4 days', 'five days': '5 days', 'six days': '6 days',
-        'seven days': '7 days', 'one week': '1 week', 'two weeks': '2 weeks',
-        'three weeks': '3 weeks', 'one month': '1 month', 'two months': '2 months',
-        'three months': '3 months', 'six months': '6 months', 'one year': '1 year',
-        'one hour': '1 hour', 'two hours': '2 hours', 'three hours': '3 hours',
-        'four hours': '4 hours', 'five hours': '5 hours', 'six hours': '6 hours',
-        'one minute': '1 minute', 'two minutes': '2 minutes', 'five minutes': '5 minutes',
-        'ten minutes': '10 minutes', 'fifteen minutes': '15 minutes', 'thirty minutes': '30 minutes',
-        'one second': '1 second', 'two seconds': '2 seconds', 'five seconds': '5 seconds'
-    }
-    
-    # Convert to lowercase for matching
-    text_lower = text.lower()
-    
-    # First, handle time expressions (more specific)
-    for written, digit in time_mappings.items():
-        if written in text_lower:
-            text = text.replace(written, digit)
-            text_lower = text.lower()  # Update lowercase version
-    
-    # Then handle individual numbers
-    for written, digit in number_mapping.items():
-        # Use word boundaries to avoid partial matches
-        pattern = r'\b' + written + r'\b'
-        text = re.sub(pattern, digit, text, flags=re.IGNORECASE)
-    
-    print(f"[DEBUG] Number normalization: '{text}'")
-    return text
-
-def text_to_speech(text, language="en"):
-    """
-    Convert text to speech audio file using pyttsx3.
-    
-    Args:
-        text: The text to convert to speech
-        language: The language code (e.g., 'en' for English)
-        
-    Returns:
-        str: URL to the generated audio file
-    """
-    try:
-        if not HEAVY_DEPS_AVAILABLE:
-            print("[WARNING] pyttsx3 not available, using mock audio URL")
-            return f"/api/audio/mock_{uuid.uuid4().hex}.mp3"
-        
-        # Create a unique filename for the audio file
-        audio_filename = f"tts_{uuid.uuid4().hex}.wav"
-        audio_path = os.path.join(BASE_DIR, "static", "audio", audio_filename)
-        
-        # Ensure the directory exists
-        os.makedirs(os.path.dirname(audio_path), exist_ok=True)
-        
-        # Generate the audio file
-        print(f"[DEBUG] Generating TTS audio for: '{text[:50]}...'")
-        tts_to_file(text, audio_path)
-        
-        # Return the URL path
-        audio_url = f"/static/audio/{audio_filename}"
-        print(f"[DEBUG] TTS audio generated: {audio_url}")
-        
-        return audio_url
-        
-    except Exception as e:
-        print(f"[ERROR] TTS generation failed: {str(e)}")
-        # Fallback to mock audio URL
-        return f"/api/audio/mock_{uuid.uuid4().hex}.mp3"
 
 
 # Create a model for transcribe response

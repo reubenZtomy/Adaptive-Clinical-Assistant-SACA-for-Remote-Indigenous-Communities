@@ -1,7 +1,7 @@
 import { Box, Button, Container, Flex, Heading, IconButton, Input, Stack, Text, VStack, HStack, Badge } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
-import { FaUserCircle, FaMicrophone, FaPause, FaPlay, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaComments, FaHeart, FaGithub, FaLanguage, FaUserAlt, FaEye, FaDeaf, FaTooth, FaHeartbeat, FaStethoscope, FaHandPaper, FaShoePrints, FaBone, FaUserInjured, FaCheck } from "react-icons/fa";
+import { FaUserCircle, FaMicrophone, FaPause, FaPlay, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaComments, FaHeart, FaGithub, FaLanguage, FaUserAlt, FaEye, FaDeaf, FaTooth, FaHeartbeat, FaStethoscope, FaHandPaper, FaShoePrints, FaBone, FaUserInjured, FaCheck, FaRobot } from "react-icons/fa";
 import logoLight from "../welcome/logo-light.svg";
 import { speakText, playAudioFeedback } from "../utils/tts";
 
@@ -421,7 +421,7 @@ export default function Chat() {
             
             // Show triage modal after progress bar completes
             setTimeout(() => {
-              const triage = generateTriageSummary([...messages, userMsg]);
+              const triage = generateTriageSummary([...messages, userMsg], data.fused_result);
               setTriageData(triage);
               setShowTriageModal(true);
               
@@ -825,38 +825,106 @@ export default function Chat() {
     }, 500);
   };
 
-  const generateTriageSummary = (chatHistory: Message[]) => {
+  const generateTriageSummary = (chatHistory: Message[], mlApiData?: any) => {
     const userMessages = chatHistory.filter(m => m.role === "user");
-    const severity = assessSeverity(chatHistory);
     
-    // Generate possible conditions based on symptoms mentioned
-    const allText = userMessages.map(m => m.content.toLowerCase()).join(" ");
-    const possibleConditions = [];
+    // Use ML API data if available, otherwise fall back to basic assessment
+    let severity, possibleConditions, nextSteps, mlResults;
     
-    if (allText.includes("chest") && allText.includes("pain")) possibleConditions.push("Cardiac issues, Angina, Heart attack");
-    if (allText.includes("head") && allText.includes("pain")) possibleConditions.push("Migraine, Tension headache, Sinusitis");
-    if (allText.includes("fever") || allText.includes("temperature")) possibleConditions.push("Viral infection, Bacterial infection, Flu");
-    if (allText.includes("stomach") || allText.includes("abdominal")) possibleConditions.push("Gastritis, Food poisoning, Indigestion");
-    if (allText.includes("breathing") || allText.includes("cough")) possibleConditions.push("Respiratory infection, Asthma, Bronchitis");
-    
-    if (possibleConditions.length === 0) {
-      possibleConditions.push("General consultation needed");
-    }
-    
-    // Generate next steps based on severity
-    const nextSteps = [];
-    if (severity.level >= 4) {
-      nextSteps.push("🚨 Call emergency services (000) immediately");
-      nextSteps.push("🏥 Go to nearest emergency department");
-    } else if (severity.level === 3) {
-      nextSteps.push("📞 Contact your GP or healthcare provider");
-      nextSteps.push("🏥 Consider urgent care center if symptoms worsen");
-    } else if (severity.level === 2) {
-      nextSteps.push("📅 Schedule appointment with healthcare provider");
-      nextSteps.push("💊 Consider over-the-counter medications if appropriate");
+    if (mlApiData && !mlApiData.error) {
+      // Use ML API results for enhanced assessment
+      const { ml1, ml2, final } = mlApiData;
+      
+      // Map ML severity to our severity system
+      const severityMapping = {
+        'mild': { level: 1, color: 'green', label: 'Mild', description: 'Low priority - monitor symptoms' },
+        'moderate': { level: 3, color: 'yellow', label: 'Moderate', description: 'Medium priority - seek medical advice' },
+        'severe': { level: 5, color: 'red', label: 'Severe', description: 'High priority - immediate medical attention needed' }
+      };
+      
+      severity = severityMapping[final.severity as keyof typeof severityMapping] || 
+                { level: 2, color: 'orange', label: 'Unknown', description: 'Assessment in progress' };
+      
+      // Use ML1 disease predictions as possible conditions
+      possibleConditions = ml1.disease_topk?.map((disease: any) => 
+        `${disease.disease} (${Math.round(disease.p * 100)}% confidence)`
+      ) || ["Assessment in progress"];
+      
+      // Generate next steps based on ML severity
+      nextSteps = [];
+      if (severity.level >= 4) {
+        nextSteps.push("🚨 Call emergency services (000) immediately");
+        nextSteps.push("🏥 Go to nearest emergency department");
+        nextSteps.push("📋 Bring this assessment summary to medical staff");
+      } else if (severity.level === 3) {
+        nextSteps.push("📞 Contact your GP or healthcare provider within 24 hours");
+        nextSteps.push("🏥 Consider urgent care center if symptoms worsen");
+        nextSteps.push("📋 Share this AI assessment with your doctor");
+      } else if (severity.level === 2) {
+        nextSteps.push("📅 Schedule appointment with healthcare provider");
+        nextSteps.push("💊 Consider over-the-counter medications if appropriate");
+        nextSteps.push("👀 Monitor symptoms closely");
+      } else {
+        nextSteps.push("👀 Continue monitoring symptoms");
+        nextSteps.push("📚 Research self-care options");
+        nextSteps.push("📋 Keep this assessment for future reference");
+      }
+      
+      // Store ML results for display
+      mlResults = {
+        ml1: {
+          severity: ml1.severity,
+          confidence: Math.round(ml1.confidence * 100),
+          diseases: ml1.disease_topk || []
+        },
+        ml2: {
+          predictedLabel: ml2.predicted_label,
+          probability: Math.round(ml2.probability * 100),
+          alternatives: ml2.top || []
+        },
+        fusion: {
+          finalDiagnosis: final.disease_label,
+          finalProbability: Math.round(final.probability * 100),
+          source: final.source,
+          policy: final.policy
+        }
+      };
+      
     } else {
-      nextSteps.push("👀 Continue monitoring symptoms");
-      nextSteps.push("📚 Research self-care options");
+      // Fallback to basic assessment
+      severity = assessSeverity(chatHistory);
+      
+      // Generate possible conditions based on symptoms mentioned
+      const allText = userMessages.map(m => m.content.toLowerCase()).join(" ");
+      possibleConditions = [];
+      
+      if (allText.includes("chest") && allText.includes("pain")) possibleConditions.push("Cardiac issues, Angina, Heart attack");
+      if (allText.includes("head") && allText.includes("pain")) possibleConditions.push("Migraine, Tension headache, Sinusitis");
+      if (allText.includes("fever") || allText.includes("temperature")) possibleConditions.push("Viral infection, Bacterial infection, Flu");
+      if (allText.includes("stomach") || allText.includes("abdominal")) possibleConditions.push("Gastritis, Food poisoning, Indigestion");
+      if (allText.includes("breathing") || allText.includes("cough")) possibleConditions.push("Respiratory infection, Asthma, Bronchitis");
+      
+      if (possibleConditions.length === 0) {
+        possibleConditions.push("General consultation needed");
+      }
+      
+      // Generate next steps based on severity
+      nextSteps = [];
+      if (severity.level >= 4) {
+        nextSteps.push("🚨 Call emergency services (000) immediately");
+        nextSteps.push("🏥 Go to nearest emergency department");
+      } else if (severity.level === 3) {
+        nextSteps.push("📞 Contact your GP or healthcare provider");
+        nextSteps.push("🏥 Consider urgent care center if symptoms worsen");
+      } else if (severity.level === 2) {
+        nextSteps.push("📅 Schedule appointment with healthcare provider");
+        nextSteps.push("💊 Consider over-the-counter medications if appropriate");
+      } else {
+        nextSteps.push("👀 Continue monitoring symptoms");
+        nextSteps.push("📚 Research self-care options");
+      }
+      
+      mlResults = null;
     }
     
     return {
@@ -864,7 +932,8 @@ export default function Chat() {
       severity,
       possibleConditions,
       nextSteps,
-      timestamp: new Date().toLocaleString()
+      timestamp: new Date().toLocaleString(),
+      mlResults // Include ML API results if available
     };
   };
 
@@ -902,7 +971,8 @@ export default function Chat() {
           _context: {
             language: lang,
             mode: mode
-          }
+          },
+          conversation_history: messages // Include complete conversation history
         })
       });
       
@@ -942,7 +1012,7 @@ export default function Chat() {
         
         // Show triage modal after progress bar completes
       setTimeout(() => {
-          const triage = generateTriageSummary([...messages, userMsg]);
+          const triage = generateTriageSummary([...messages, userMsg], data.fused_result);
           setTriageData(triage);
         setShowTriageModal(true);
         speakText("Medical triage summary is ready. Please review the assessment results.");
@@ -1792,6 +1862,120 @@ export default function Chat() {
                         </Box>
                       ))}
                     </VStack>
+                  </Box>
+                )}
+
+                {/* ML API Results */}
+                {triageData?.mlResults && (
+                  <Box>
+                    <Heading size="md" mb={3} display="flex" alignItems="center" gap={2}>
+                      <FaRobot color="purple" />
+                      Advanced AI Analysis
+                    </Heading>
+                    
+                    {/* Final Diagnosis */}
+                    <Box mb={4}>
+                      <Heading size="sm" mb={2} color={isDark ? "purple.200" : "purple.800"}>
+                        🎯 Final AI Diagnosis
+                      </Heading>
+                      <Box 
+                        bg={isDark ? "purple.900" : "purple.100"} 
+                        p={4} 
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor={isDark ? "purple.700" : "purple.300"}
+                      >
+                        <HStack justify="space-between" mb={2}>
+                          <Text fontWeight="bold" fontSize="lg" color={isDark ? "purple.200" : "purple.800"}>
+                            {triageData.mlResults.fusion.finalDiagnosis}
+                          </Text>
+                          <Badge colorScheme="purple" fontSize="sm">
+                            {triageData.mlResults.fusion.finalProbability}% confidence
+                          </Badge>
+                        </HStack>
+                        <Text fontSize="sm" color={isDark ? "purple.300" : "purple.700"}>
+                          Source: {triageData.mlResults.fusion.source} | Policy: {triageData.mlResults.fusion.policy}
+                        </Text>
+                      </Box>
+                    </Box>
+
+                    {/* ML1 Results */}
+                    <Box mb={4}>
+                      <Heading size="sm" mb={2} color={isDark ? "blue.200" : "blue.800"}>
+                        🤖 AI Model 1 (Severity & Disease Analysis)
+                      </Heading>
+                      <Box 
+                        bg={isDark ? "blue.900" : "blue.100"} 
+                        p={4} 
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor={isDark ? "blue.700" : "blue.300"}
+                      >
+                        <HStack justify="space-between" mb={3}>
+                          <Text fontWeight="semibold" color={isDark ? "blue.200" : "blue.800"}>
+                            Severity: {triageData.mlResults.ml1.severity}
+                          </Text>
+                          <Badge colorScheme="blue" fontSize="sm">
+                            {triageData.mlResults.ml1.confidence}% confidence
+                          </Badge>
+                        </HStack>
+                        
+                        <Text fontSize="sm" color={isDark ? "blue.300" : "blue.700"} mb={3}>
+                          Top Disease Predictions:
+                        </Text>
+                        <VStack spacing={2} align="stretch">
+                          {triageData.mlResults.ml1.diseases.map((disease: any, index: number) => (
+                            <HStack key={index} justify="space-between" p={2} bg={isDark ? "blue.800" : "blue.50"} borderRadius="sm">
+                              <Text fontSize="sm" color={isDark ? "blue.200" : "blue.800"}>
+                                {disease.disease}
+                              </Text>
+                              <Text fontSize="sm" color={isDark ? "blue.300" : "blue.600"}>
+                                {Math.round(disease.p * 100)}%
+                              </Text>
+                            </HStack>
+                          ))}
+                        </VStack>
+                      </Box>
+                    </Box>
+
+                    {/* ML2 Results */}
+                    <Box mb={4}>
+                      <Heading size="sm" mb={2} color={isDark ? "green.200" : "green.800"}>
+                        🧠 AI Model 2 (Alternative Analysis)
+                      </Heading>
+                      <Box 
+                        bg={isDark ? "green.900" : "green.100"} 
+                        p={4} 
+                        borderRadius="md"
+                        border="1px solid"
+                        borderColor={isDark ? "green.700" : "green.300"}
+                      >
+                        <HStack justify="space-between" mb={3}>
+                          <Text fontWeight="semibold" color={isDark ? "green.200" : "green.800"}>
+                            Primary Prediction: Label {triageData.mlResults.ml2.predictedLabel}
+                          </Text>
+                          <Badge colorScheme="green" fontSize="sm">
+                            {triageData.mlResults.ml2.probability}% confidence
+                          </Badge>
+                        </HStack>
+                        
+                        <Text fontSize="sm" color={isDark ? "green.300" : "green.700"} mb={3}>
+                          Alternative Predictions:
+                        </Text>
+                        <VStack spacing={2} align="stretch">
+                          {triageData.mlResults.ml2.alternatives.map((alt: any, index: number) => (
+                            <HStack key={index} justify="space-between" p={2} bg={isDark ? "green.800" : "green.50"} borderRadius="sm">
+                              <Text fontSize="sm" color={isDark ? "green.200" : "green.800"}>
+                                Label {alt.label}
+                              </Text>
+                              <Text fontSize="sm" color={isDark ? "green.300" : "green.600"}>
+                                {Math.round(alt.probability * 100)}%
+                              </Text>
+                            </HStack>
+                          ))}
+                        </VStack>
+                      </Box>
+                    </Box>
                   </Box>
                 )}
 

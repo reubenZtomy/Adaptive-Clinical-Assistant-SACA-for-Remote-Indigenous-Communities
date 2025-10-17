@@ -32,7 +32,7 @@ import numpy as np
 # Artifact directory
 # -----------------------
 _DEFAULT_ART_DIR = (
-    Path(__file__).resolve().parent.parent / "artifacts" / "saca-triage-v1"
+    Path(__file__).resolve().parent / "artifacts" / "saca-triage-v1"
 )
 ART_DIR = Path(os.environ.get("MODEL_DIR", _DEFAULT_ART_DIR))
 
