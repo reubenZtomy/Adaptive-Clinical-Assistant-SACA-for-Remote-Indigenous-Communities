@@ -1,4 +1,4 @@
-import { Box, Button, Container, Heading, IconButton, Stack, Text, HStack } from "@chakra-ui/react";
+import { Box, Button, Container, Heading, IconButton, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router";
 import { speakOnHover } from "../utils/tts";
@@ -9,6 +9,9 @@ export function Welcome() {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
   const [user, setUser] = useState<any>(null);
+  // Background image placed under /public/images/arrernte-bg.jpg
+  // You can replace with any culturally appropriate image for Eastern/Central Arrernte (Mparntwe – Alice Springs)
+  const BG_URL = "/images/arrerente.jpg";
   const headingRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const taglineRef = useRef<HTMLParagraphElement | null>(null);
@@ -92,7 +95,33 @@ export function Welcome() {
     btnIndexRef.current = btnIndex;
   }, [btnIndex]);
   return (
-    <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center">
+    <Box position="relative" minH="100dvh">
+      {/* Background image layer */}
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        right={0}
+        bottom={0}
+        // Layered backgrounds: photo on top, soft gradient fallback beneath
+        bgImage={`url(${BG_URL}), linear-gradient(180deg, #e6f1ed 0%, #f3f7f9 100%)`}
+        bgSize="cover"
+        bgPos="center"
+        bgRepeat="no-repeat"
+        zIndex={0}
+      />
+      {/* Readability overlay (adjusts with light/dark) */}
+      <Box
+        position="fixed"
+        top={0}
+        left={0}
+        right={0}
+        bottom={0}
+        bg={isDark ? "blackAlpha.400" : "blackAlpha.300"}
+        zIndex={1}
+      />
+
+      <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center" position="relative" zIndex={2}>
       <Box position="fixed" top={4} right={4}>
           <IconButton aria-label="Toggle color mode" onClick={() => setIsDark((v) => !v)} variant="ghost" fontSize="2xl">
           {isDark ? "☀️" : "🌙"}
@@ -102,7 +131,13 @@ export function Welcome() {
         <Box position="relative" minH={{ base: "auto", md: "unset" }}>
           <AnimatePresence mode="wait">
             <motion.div key={`heading-${btnIndex}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.35 }}>
-              <Heading ref={headingRef as any} size={{ base: "2xl", md: "4xl" }} lineHeight={1.1}>
+              <Heading
+                ref={headingRef as any}
+                size={{ base: "2xl", md: "4xl" }}
+                lineHeight={1.1}
+                color="white"
+                textShadow="0 2px 12px rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.6)"
+              >
                 {btnIndex === 0 ? "Welcome to SwinSACA" : "Akangkeme SwinSACA"}
               </Heading>
             </motion.div>
@@ -111,7 +146,13 @@ export function Welcome() {
         <Box position="relative">
           <AnimatePresence mode="wait">
             <motion.div key={`tag-${btnIndex}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.35 }}>
-              <Text ref={taglineRef as any} fontSize={{ base: "xl", md: "2xl" }} color={isDark ? "gray.100" : "gray.700"} maxW="3xl">
+              <Text
+                ref={taglineRef as any}
+                fontSize={{ base: "xl", md: "2xl" }}
+                color="whiteAlpha.900"
+                textShadow="0 2px 8px rgba(0,0,0,0.7)"
+                maxW="3xl"
+              >
                 {btnIndex === 0
                   ? "AI-guided medical triage to help you describe symptoms and get the right care, fast."
                   : "AI-guided akaltye akngakeme to help you angkeme symptoms and get the right care, fast."}
@@ -141,33 +182,40 @@ export function Welcome() {
         {!user && (
           <Box mt={8}>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.5 }}>
-              <Text fontSize="sm" color={isDark ? "gray.300" : "gray.600"} mb={3}>
+              <Text fontSize="sm" color="whiteAlpha.900" textShadow="0 1px 6px rgba(0,0,0,0.7)" mb={3}>
                 Want to save your progress and access personalized features?
               </Text>
-              <HStack spacing={3} justify="center">
-                <Button
-                  as={Link}
-                  to="/login"
-                  variant="outline"
-                  size="sm"
-                  colorScheme="teal"
-                >
-                  Sign In
-                </Button>
-                <Button
-                  as={Link}
-                  to="/register"
-                  variant="ghost"
-                  size="sm"
-                  colorScheme="teal"
-                >
-                  Create Account
-                </Button>
-              </HStack>
+              <Stack direction="row" gap={3} justify="center">
+                <Link to="/login">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    color="white"
+                    borderColor="whiteAlpha.800"
+                    _hover={{ bg: "whiteAlpha.200", borderColor: "whiteAlpha.900" }}
+                    _active={{ bg: "whiteAlpha.300" }}
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button
+                    variant="solid"
+                    size="sm"
+                    bg="teal.500"
+                    color="white"
+                    _hover={{ bg: "teal.600" }}
+                    _active={{ bg: "teal.700" }}
+                  >
+                    Create Account
+                  </Button>
+                </Link>
+              </Stack>
             </motion.div>
           </Box>
         )}
       </Stack>
-    </Container>
+      </Container>
+    </Box>
   );
 }

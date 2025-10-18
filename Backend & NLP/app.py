@@ -10,7 +10,7 @@ import os
 import csv
 import re
 from Glossary.glossary_translator import Glossary as _Glossary, translate as _gloss_translate
-import arrernte_classifier as arrcls
+#import arrernte_classifier as arrcls
 import tempfile
 import threading
 import webbrowser

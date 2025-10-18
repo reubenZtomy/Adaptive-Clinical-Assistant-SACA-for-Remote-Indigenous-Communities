@@ -14,6 +14,7 @@ export default function Mode() {
   const location = useLocation();
   const lang = (location.state as any)?.lang ?? "en";
   const [isDark, setIsDark] = useState(false);
+  const BG_URL = "/images/alice-springs-at-night.jpg";
   const [audioLoaded, setAudioLoaded] = useState(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const currentTTSRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -137,7 +138,14 @@ export default function Mode() {
 
   return (
     <Box minH="100dvh" display="flex" alignItems="center" justifyContent="center" px={4}>
-      <Container maxW="7xl" position="relative" pb={24}>
+      {/* Background image + gradient */}
+      <Box position="fixed" inset={0} zIndex={0}
+        bgImage={`url(${BG_URL}), linear-gradient(180deg, #e6f1ed 0%, #f3f7f9 100%)`}
+        bgSize="cover" bgPos="center" bgRepeat="no-repeat"
+      />
+      {/* Overlay for readability */}
+      <Box position="fixed" inset={0} zIndex={1} bg={isDark ? "blackAlpha.400" : "blackAlpha.300"} />
+      <Container maxW="7xl" position="relative" pb={24} zIndex={2}>
         {/* Audio loading indicator */}
         <Box position="fixed" top={4} left={4} zIndex={10}>
           <Text 
@@ -161,8 +169,8 @@ export default function Mode() {
           </IconButton>
         </Box>
         <Stack gap={10} align="center" textAlign="center">
-          <Heading size="2xl" color={isDark ? "gray.100" : undefined}>How would you like to communicate?</Heading>
-          <Text fontSize={{ base: "xl", md: "2xl" }} color={isDark ? "gray.300" : "gray.600"}>Select a mode below</Text>
+          <Heading size="2xl" color="white" textShadow="0 2px 12px rgba(0,0,0,0.9)">How would you like to communicate?</Heading>
+          <Text fontSize={{ base: "xl", md: "2xl" }} color="whiteAlpha.900" textShadow="0 2px 8px rgba(0,0,0,0.6)">Select a mode below</Text>
           <SimpleGrid mt={{ base: 12, md: 16 }} columns={{ base: 1, md: 3 }} gap={{ base: 10, md: 16 }} w="full">
             <Box 
               role="button" 
@@ -170,18 +178,20 @@ export default function Mode() {
               onMouseEnter={() => audioLoaded && playHoverAudio("Text mode - Type your messages")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
-              borderRadius="xl" 
-              p={6} 
-              bg={isDark ? "teal.900" : "teal.50"} 
-              borderColor={isDark ? "teal.700" : "teal.400"} 
-              color={isDark ? "teal.100" : "teal.800"} 
-              _hover={{ shadow: "md", bg: isDark ? "teal.800" : "teal.100" }}
+              borderRadius="2xl" 
+              p={8} 
+              bg={isDark ? "whiteAlpha.200" : "whiteAlpha.800"}
+              backdropFilter="blur(2px)"
+              borderColor={isDark ? "whiteAlpha.400" : "teal.300"}
+              color={isDark ? "whiteAlpha.900" : "teal.900"}
+              shadow="lg"
+              _hover={{ shadow: "xl", transform: "translateY(-2px)", transition: "all 180ms ease" }}
               cursor="pointer"
             >
               <Stack align="center" gap={3}>
                 <FaKeyboard size={48} />
                 <Heading size="xl">Text</Heading>
-                <Text color={isDark ? "teal.200" : "teal.700"}>Type your messages</Text>
+                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Type your messages</Text>
               </Stack>
             </Box>
             <Box 
@@ -190,18 +200,20 @@ export default function Mode() {
               onMouseEnter={() => audioLoaded && playHoverAudio("Voice mode - Speak with the assistant")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
-              borderRadius="xl" 
-              p={6} 
-              bg={isDark ? "teal.900" : "teal.50"} 
-              borderColor={isDark ? "teal.700" : "teal.400"} 
-              color={isDark ? "teal.100" : "teal.800"} 
-              _hover={{ shadow: "md", bg: isDark ? "teal.800" : "teal.100" }}
+              borderRadius="2xl" 
+              p={8} 
+              bg={isDark ? "whiteAlpha.200" : "whiteAlpha.800"}
+              backdropFilter="blur(2px)"
+              borderColor={isDark ? "whiteAlpha.400" : "teal.300"}
+              color={isDark ? "whiteAlpha.900" : "teal.900"}
+              shadow="lg"
+              _hover={{ shadow: "xl", transform: "translateY(-2px)", transition: "all 180ms ease" }}
               cursor="pointer"
             >
               <Stack align="center" gap={3}>
                 <FaMicrophone size={48} />
                 <Heading size="xl">Voice</Heading>
-                <Text color={isDark ? "teal.200" : "teal.700"}>Speak with the assistant</Text>
+                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Speak with the assistant</Text>
               </Stack>
             </Box>
             <Box 
@@ -210,18 +222,20 @@ export default function Mode() {
               onMouseEnter={() => audioLoaded && playHoverAudio("Images mode - Share helpful pictures")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
-              borderRadius="xl" 
-              p={6} 
-              bg={isDark ? "teal.900" : "teal.50"} 
-              borderColor={isDark ? "teal.700" : "teal.400"} 
-              color={isDark ? "teal.100" : "teal.800"} 
-              _hover={{ shadow: "md", bg: isDark ? "teal.800" : "teal.100" }}
+              borderRadius="2xl" 
+              p={8} 
+              bg={isDark ? "whiteAlpha.200" : "whiteAlpha.800"}
+              backdropFilter="blur(2px)"
+              borderColor={isDark ? "whiteAlpha.400" : "teal.300"}
+              color={isDark ? "whiteAlpha.900" : "teal.900"}
+              shadow="lg"
+              _hover={{ shadow: "xl", transform: "translateY(-2px)", transition: "all 180ms ease" }}
               cursor="pointer"
             >
               <Stack align="center" gap={3}>
                 <FaImages size={48} />
                 <Heading size="xl">Images</Heading>
-                <Text color={isDark ? "teal.200" : "teal.700"}>Share helpful pictures</Text>
+                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Share helpful pictures</Text>
               </Stack>
             </Box>
           </SimpleGrid>

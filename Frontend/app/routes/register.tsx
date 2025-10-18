@@ -119,7 +119,7 @@ export default function Register() {
           borderColor={borderColor}
           w="full"
         >
-          <Stack spacing={6}>
+          <Stack gap={6}>
             <Box textAlign="center">
               <Heading size="lg" mb={2}>
                 Create Account
@@ -144,7 +144,7 @@ export default function Register() {
             )}
 
             <form onSubmit={handleSubmit}>
-              <Stack spacing={4}>
+              <Stack gap={4}>
                 <HStack>
                   <Box flex={1}>
                     <Text as="label" fontSize="sm" fontWeight="medium" mb={2} display="block">
@@ -270,7 +270,7 @@ export default function Register() {
                   type="submit"
                   colorScheme="teal"
                   size="lg"
-                  isLoading={isLoading}
+                  loading={isLoading}
                   loadingText="Creating account..."
                   w="full"
                 >
