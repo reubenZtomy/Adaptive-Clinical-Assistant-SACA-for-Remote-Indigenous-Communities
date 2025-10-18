@@ -1359,6 +1359,26 @@ export default function Chat() {
     { id: "1month+", en: "1+ months", arr: "Uterne mpeke atnyeme 1+" } // 1+ months / long time
   ];
 
+
+  // ---------- Images for tiles (body parts / conditions / durations) ----------
+  const getImageSrc = (kind: 'part' | 'condition' | 'duration', id: string) => {
+    // Place your assets in Frontend/public/images/chat/{kind}/{id}.jpg
+    // Example: /images/chat/part/head.jpg, /images/chat/condition/headache.jpg, /images/chat/duration/today.jpg
+    const safeId = encodeURIComponent(id);
+    return `/images/chat/${kind}/${safeId}.jpg`;
+  };
+
+  const ImageBox = ({ src, alt, height }: { src: string; alt: string; height: any }) => (
+    <Box bg={isDark ? "gray.600" : "gray.300"} h={height} display="flex" alignItems="center" justifyContent="center" position="relative" overflow="hidden">
+      <img
+        src={src}
+        alt={alt}
+        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+      />
+    </Box>
+  );
+
   // Auto-finalize images flow: when last step is reached for last selected part,
   // automatically send summary to backend and show progress/popup
   useEffect(() => {
@@ -1450,8 +1470,8 @@ export default function Chat() {
                 }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "130px", md: "160px" }} borderColor={selected ? "teal.500" : undefined}>
-                <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "90px", md: "110px" }} display="flex" alignItems="center" justifyContent="center" position="relative">
-                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {en}</Text>
+                <Box position="relative">
+                  <ImageBox src={getImageSrc('part', id)} alt={en} height={{ base: "90px", md: "110px" }} />
                   {selected && (
                     <Box position="absolute" top={2} right={2} bg="teal.500" color="white" px={2} py={1} borderRadius="md" fontSize="xs">Selected</Box>
                   )}
@@ -1510,9 +1530,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>Select condition for</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-              <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {currentPartName}</Text>
-            </Box>
+            <ImageBox src={getImageSrc('part', currentPartId)} alt={currentPartName} height={{ base: "80px", md: "100px" }} />
             <Box p={2} textAlign="center">
               <Text fontWeight="semibold">{currentPartName}</Text>
               <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? `Arrernte ${currentPartName}` : currentPartName}</Text>
@@ -1523,9 +1541,7 @@ export default function Chat() {
               <Box key={id} role="button" onClick={() => { setSelectedCondition(id); setImageFlowStep(2); addUserMessage(`Condition: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
-                <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {en}</Text>
-                </Box>
+                <ImageBox src={getImageSrc('condition', id)} alt={en} height={{ base: "80px", md: "100px" }} />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
@@ -1541,9 +1557,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>Select intensity (1-10)</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-              <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
-            </Box>
+            <ImageBox src={getImageSrc('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>
@@ -1577,9 +1591,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>How long has this been happening?</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-              <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
-            </Box>
+            <ImageBox src={getImageSrc('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
             <Box p={2} textAlign="center">
               <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
               <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
@@ -1590,9 +1602,7 @@ export default function Chat() {
               <Box key={id} role="button" onClick={() => { setSelectedDuration(id); setImageFlowStep(4); addUserMessage(`Duration: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
-                <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {en}</Text>
-                </Box>
+                <ImageBox src={getImageSrc('duration', id)} alt={en} height={{ base: "80px", md: "100px" }} />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
@@ -2046,18 +2056,8 @@ export default function Chat() {
 
             {/* Inline images-mode selection UI as an assistant message inside chatbox */}
             {mode === "images" && (
-              <Flex justify="flex-start" align="flex-end" gap={3}>
-                <Box w={10} h={10} borderRadius="full" overflow="hidden" flexShrink={0} bg={isDark ? "whiteAlpha.900" : "white"} display="flex" alignItems="center" justifyContent="center" borderWidth="1px">
-                  <img src={logoLight} alt="SwinSACA" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </Box>
-                <Box 
-                  maxW={{ base: "85%", md: "60%" }} 
-                  bg={isDark ? "whiteAlpha.900" : "gray.100"} 
-                  color={isDark ? "black" : "black"} 
-                  px={4} 
-                  py={3} 
-                  borderRadius="xl"
-                >
+              <Flex justify="center" align="stretch" gap={0} w="100%">
+                <Box w="100%" bg="transparent" color="inherit" px={0} py={0}>
                   {renderImagesFlow()}
                 </Box>
               </Flex>
