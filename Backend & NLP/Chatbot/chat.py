@@ -1,6 +1,7 @@
 # --- Chatbot/chat.py (updated) ---
 
 import json
+import os
 import random
 import re
 from typing import Dict, List, Optional
@@ -11,15 +12,23 @@ import torch
 # Support both package import (from Chatbot.chat) and running this file directly
 try:
     from .model import NeuralNet
-    from .nltk_utils import tokenize, bag_of_words, stem
+    from .nltk_utils import tokenize, bag_of_words, stem as nltk_stem
 except ImportError:  # running as a script (python chat.py)
     from model import NeuralNet
-    from nltk_utils import tokenize, bag_of_words, stem
+    from nltk_utils import tokenize, bag_of_words, stem as nltk_stem
 
 # ---------- Paths relative to this file ----------
 PKG_DIR = Path(__file__).resolve().parent
-INTENTS_PATH = PKG_DIR / "intents.json"
-DATA_PATH = PKG_DIR / "data.pth"
+# Allow overriding intents/model via env vars. If a custom intents is used and no model is specified,
+# auto-try data_<stem>.pth, else fall back to data.pth
+INTENTS_PATH = Path(os.environ.get("SWINSACA_INTENTS", str(PKG_DIR / "intents.json")))
+_model_override = os.environ.get("SWINSACA_MODEL")
+if _model_override:
+    DATA_PATH = Path(_model_override)
+else:
+    stem = INTENTS_PATH.stem
+    candidate = PKG_DIR / f"data_{stem}.pth"
+    DATA_PATH = candidate if candidate.exists() else (PKG_DIR / "data.pth")
 
 # -------------- Helpers for JSON schema --------------
 def get_intents(doc: Dict):
@@ -79,6 +88,7 @@ COUGH_INTENTS    = {"Symptom_Cough", "CoughFollowup", "Respiratory"}
 STOMACH_INTENTS  = {"Symptom_Stomach", "StomachFollowup", "Digestive"}
 FATIGUE_INTENTS  = {"Symptom_Fatigue", "FatigueFollowup", "GeneralWeakness"}
 SKIN_INTENTS     = {"Symptom_SkinRash", "SkinRashFollowup", "Dermatology"}  # new
+GENERAL_INTENTS  = {"General_Followup"}
 
 # Simple keyword sniffers to kick off a flow even if classifier tag isn't present
 SKIN_KEYWORDS = [
@@ -115,6 +125,76 @@ def extract_yes_no(text: str) -> Optional[bool]:
     if any(w in t for w in ["no", "nope", "nah", "negative", "don't", "do not", "haven't", "hasn't"]):
         return False
     return None
+
+# -------------- General follow-up flow (for unrecognized inputs) --------------
+GENERAL_ASSOC_FLAGS = [
+    "fever", "cough", "shortness of breath", "breathless", "chest pain",
+    "headache", "nausea", "vomit", "vomiting", "diarrhea", "rash", "pain"
+]
+
+def start_general_flow():
+    dialog_state["active_domain"] = "general"
+    dialog_state["stage"] = "ask_category"
+    dialog_state["slots"] = {}
+    return (
+        "I’m here to help. Let’s start broadly: are you having pain, fever, cough, stomach issues, skin changes, or fatigue?"
+    )
+
+def continue_general_flow(user_text: str) -> str:
+    stage = dialog_state["stage"]
+    slots = dialog_state["slots"]
+
+    # Passive extraction
+    sev = extract_severity(user_text)
+    if sev is not None and "severity" not in slots:
+        slots["severity"] = sev
+    dur = extract_duration(user_text)
+    if dur and "duration" not in slots:
+        slots["duration"] = dur
+    # crude symptom flags capture
+    t = user_text.lower()
+    assoc_hits = [w for w in GENERAL_ASSOC_FLAGS if w in t]
+    if assoc_hits:
+        prev = set(slots.get("assoc", []))
+        slots["assoc"] = list(prev.union(assoc_hits))
+
+    if stage == "ask_category":
+        dialog_state["stage"] = "ask_location"
+        return "Where in your body do you notice this the most?"
+
+    if stage == "ask_location":
+        if user_text.strip():
+            slots["location"] = user_text.strip()
+        dialog_state["stage"] = "ask_severity"
+        return "On a scale of 1 to 10, how severe is it right now?"
+
+    if stage == "ask_severity":
+        if "severity" not in slots:
+            return "On a scale of 1 to 10, how severe is it right now?"
+        dialog_state["stage"] = "ask_duration"
+        return "When did this begin, and is it getting better, worse, or about the same?"
+
+    if stage == "ask_duration":
+        if "duration" not in slots:
+            return "How long has this been going on (e.g., 2 days, since yesterday)?"
+        dialog_state["stage"] = "ask_assoc"
+        return "Any of these: fever, cough, nausea/vomiting, diarrhea, rash, chest pain, or shortness of breath?"
+
+    if stage == "ask_assoc":
+        dialog_state["stage"] = "summary"
+
+    if stage == "summary":
+        loc_txt = slots.get("location", "unspecified location")
+        sev_txt = slots.get("severity", "unspecified severity")
+        dur_txt = slots.get("duration", "unspecified duration")
+        assoc_txt = ", ".join(slots.get("assoc", [])) if slots.get("assoc") else "no associated symptoms reported"
+        reset_state()
+        return (
+            f"Thanks for the details. Summary: issue at {loc_txt}, severity {sev_txt}/10, duration {dur_txt}, {assoc_txt}. "
+            f"If you develop red-flag symptoms like severe chest pain, trouble breathing, confusion, fainting, or rapidly worsening symptoms, seek urgent care."
+        )
+
+    return "Please share a bit more so I can guide you appropriately."
 
 # -------------- Headache flow --------------
 LOCATION_WORDS_HEAD = {
@@ -174,7 +254,7 @@ def continue_headache_flow(user_text: str) -> str:
 
     if stage == "ask_severity":
         if "severity" not in slots:
-            return "On a scale of 1 to 10, how severe is the pain?"
+            return "Severity 1–10?"
         dialog_state["stage"] = "ask_duration"
         return "Understood. How long has this been going on?"
 
@@ -704,7 +784,7 @@ def continue_skin_flow(user_text: str) -> str:
 # -------------- Classifier + Router --------------
 def predict_tag(msg: str):
     tokens = tokenize(msg)
-    tokens = [stem(t) for t in tokens]
+    tokens = [nltk_stem(t) for t in tokens]
     X = bag_of_words(tokens, all_words)
     X = torch.from_numpy(X).unsqueeze(0).to(device)
     with torch.no_grad():
@@ -724,6 +804,13 @@ def canned_response_for_tag(predicted_tag: str) -> Optional[str]:
     return None
 
 def route_message(user_text: str) -> str:
+    # Fast path: simple keyword rule to ensure Arrernte greeting 'werte' maps to Greeting
+    if re.match(r"^\s*werte\b", user_text.strip(), flags=re.I):
+        # If not already in a flow, return a canned Greeting response
+        resp = canned_response_for_tag("Greeting")
+        if resp:
+            return resp
+
     # Continue active flow first
     domain = dialog_state["active_domain"]
     if domain == "headache":
@@ -738,9 +825,21 @@ def route_message(user_text: str) -> str:
         return continue_fatigue_flow(user_text)
     if domain == "skin":
         return continue_skin_flow(user_text)
+    if domain == "general":
+        return continue_general_flow(user_text)
 
     # Otherwise classify new message
     tag, conf = predict_tag(user_text)
+
+    # If user only sent a number 1-10, assume it's a severity answer – start general flow
+    if re.fullmatch(r"\s*(10|[1-9])\s*", user_text):
+        # Seed a general flow with severity captured
+        _ = start_general_flow()
+        # Pre-fill severity if not set
+        sev = extract_severity(user_text)
+        if sev is not None:
+            dialog_state["slots"]["severity"] = sev
+        return continue_general_flow("")
 
     # Kick off the correct flow if it's a symptom domain via classifier
     if conf >= THRESHOLD:
@@ -756,6 +855,8 @@ def route_message(user_text: str) -> str:
             return start_fatigue_flow()
         if tag in SKIN_INTENTS:
             return start_skin_flow()
+        if tag in GENERAL_INTENTS:
+            return start_general_flow()
 
         # Otherwise, serve canned response
         resp = canned_response_for_tag(tag)
@@ -767,7 +868,8 @@ def route_message(user_text: str) -> str:
     if any(k in t for k in SKIN_KEYWORDS):
         return start_skin_flow()
 
-    return "I’m not fully sure yet—could you rephrase or add more details?"
+    # Low confidence → move into general follow-up flow instead of giving up
+    return start_general_flow()
 
 def chat_loop():
     print("Let's chat! (type 'quit' to exit)")

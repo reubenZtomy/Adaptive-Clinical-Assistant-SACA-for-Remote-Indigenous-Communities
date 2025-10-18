@@ -1,4 +1,5 @@
 import json
+import os
 import random
 from typing import List, Dict
 
@@ -43,7 +44,9 @@ def get_responses(intent: Dict) -> List[str]:
 # ---------------------------
 # Load data
 # ---------------------------
-with open("intents.json", "r", encoding="utf-8") as f:
+# Allow overriding intents file via env var SWINSACA_INTENTS
+INTENTS_FILE = os.environ.get("SWINSACA_INTENTS", "intents.json")
+with open(INTENTS_FILE, "r", encoding="utf-8") as f:
     doc = json.load(f)
 
 intents = get_intents(doc)
@@ -135,6 +138,8 @@ data = {
     "all_words": all_words,
     "tags": tags,
 }
-FILE = "data.pth"
+# Save to a name based on the intents file stem for convenience
+stem = os.path.splitext(os.path.basename(INTENTS_FILE))[0]
+FILE = f"data_{stem}.pth" if stem != "intents" else "data.pth"
 torch.save(data, FILE)
 print(f"Saved trained data to {FILE}")

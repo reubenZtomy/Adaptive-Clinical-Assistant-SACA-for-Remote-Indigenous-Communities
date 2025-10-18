@@ -13,3 +13,11 @@ body {
     color-scheme: dark;
   }
 }
+
+/* Ensure colors are preserved when printing */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

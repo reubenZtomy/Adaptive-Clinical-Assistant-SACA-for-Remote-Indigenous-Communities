@@ -1,7 +1,7 @@
 import { Box, Button, Container, Flex, Heading, IconButton, Input, Stack, Text, VStack, HStack, Badge } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
-import { FaUserCircle, FaMicrophone, FaPause, FaPlay, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaComments, FaHeart, FaGithub, FaLanguage, FaUserAlt, FaEye, FaDeaf, FaTooth, FaHeartbeat, FaStethoscope, FaHandPaper, FaShoePrints, FaBone, FaUserInjured, FaCheck, FaRobot } from "react-icons/fa";
+import { FaUserCircle, FaMicrophone, FaPause, FaPlay, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaComments, FaHeart, FaGithub, FaLanguage, FaUserAlt, FaEye, FaDeaf, FaTooth, FaHeartbeat, FaStethoscope, FaHandPaper, FaShoePrints, FaBone, FaUserInjured, FaCheck, FaRobot, FaThumbtack } from "react-icons/fa";
 import logoLight from "../welcome/logo-light.svg";
 import { speakText, playAudioFeedback } from "../utils/tts";
 
@@ -58,10 +58,14 @@ export default function Chat() {
   const [imageFlowStep, setImageFlowStep] = useState<number>(0);
   const [selectedBodyPart, setSelectedBodyPart] = useState<string>("");
   const [selectedBodyParts, setSelectedBodyParts] = useState<string[]>([]);
+  const [finishedImagesFlow, setFinishedImagesFlow] = useState<boolean>(false);
   const [currentBodyPartIndex, setCurrentBodyPartIndex] = useState<number>(0);
   const [selectedCondition, setSelectedCondition] = useState<string>("");
   const [symptomIntensity, setSymptomIntensity] = useState<number>(5);
   const [selectedDuration, setSelectedDuration] = useState<string>("");
+  const [welcomeAudioPlayed, setWelcomeAudioPlayed] = useState(false);
+  const [showAudioPrompt, setShowAudioPrompt] = useState(false);
+  const isPlayingWelcomeAudio = useRef(false);
 
   // Images mode: inline selectable palette appended to chat
   const addUserMessage = (text: string) => {
@@ -90,6 +94,61 @@ export default function Chat() {
   useEffect(() => {
     sessionStorage.setItem('swinsaca_language', lang);
     sessionStorage.setItem('swinsaca_mode', mode);
+    
+    // If switching to Arrernte voice mode, update the welcome message and play audio
+    if (lang === "arrernte" && mode === "voice" && messages.length > 0) {
+      const welcomeMessage = "Werte! Ayenge SwinSACA, your AI medical assistant akaltye. Ayenge here to help arrantherre with health-related questions and give guidance arlke. How arrantherre feeling today nhenhe? What symptoms or concerns anwerne want to ileme atyenge akaltye?";
+      const welcomeAudioUrl = "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3";
+      
+      // Update the first message (welcome message)
+      setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages];
+        if (updatedMessages[0] && updatedMessages[0].role === "assistant") {
+          updatedMessages[0] = {
+            ...updatedMessages[0],
+            content: welcomeMessage,
+            audioUrl: welcomeAudioUrl
+          };
+        }
+        return updatedMessages;
+      });
+      
+      // Try to play welcome audio immediately when switching to Arrernte voice mode
+      if (welcomeAudioUrl && !isPlayingWelcomeAudio.current) {
+        isPlayingWelcomeAudio.current = true;
+        setTimeout(() => {
+          const audio = new Audio(welcomeAudioUrl);
+          audio.play()
+            .then(() => {
+              console.log('🎵 Welcome audio played successfully on language switch');
+              setWelcomeAudioPlayed(true);
+              isPlayingWelcomeAudio.current = false;
+            })
+            .catch((error) => {
+              console.log('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
+              setShowAudioPrompt(true);
+              isPlayingWelcomeAudio.current = false;
+              // Hide the prompt after 5 seconds
+              setTimeout(() => setShowAudioPrompt(false), 5000);
+            });
+        }, 300);
+      }
+    } else if (lang === "english" && mode === "voice" && messages.length > 0) {
+      // If switching to English voice mode, update to English welcome message
+      const welcomeMessage = "Hello! I'm SwinSACA, your AI medical assistant. I'm here to help you with health-related questions and provide guidance. How are you feeling today? What symptoms or concerns would you like to discuss?";
+      
+      setMessages(prevMessages => {
+        const updatedMessages = [...prevMessages];
+        if (updatedMessages[0] && updatedMessages[0].role === "assistant") {
+          updatedMessages[0] = {
+            ...updatedMessages[0],
+            content: welcomeMessage,
+            audioUrl: undefined
+          };
+        }
+        return updatedMessages;
+      });
+    }
   }, [lang, mode]);
   
   // Handle settings from location state (when navigating from selection pages)
@@ -130,12 +189,43 @@ export default function Chat() {
       setSymptomIntensity(5);
       setSelectedDuration("");
     } else {
-      setMessages([{ 
+      // Set welcome message based on language and mode
+      let welcomeMessage = "Hello! I'm SwinSACA, your AI medical assistant. I'm here to help you with health-related questions and provide guidance. How are you feeling today? What symptoms or concerns would you like to discuss?";
+      let welcomeAudioUrl: string | undefined = undefined;
+      
+      if (lang === "arrernte" && mode === "voice") {
+        welcomeMessage = "Werte! Ayenge SwinSACA, your AI medical assistant akaltye. Ayenge here to help arrantherre with health-related questions and give guidance arlke. How arrantherre feeling today nhenhe? What symptoms or concerns anwerne want to ileme atyenge akaltye?";
+        welcomeAudioUrl = "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3";
+      }
+      
+      setMessages([{
         id: Date.now(), 
         role: "assistant", 
-        content: "Hello! I'm SwinSACA, your AI medical assistant. I'm here to help you with health-related questions and provide guidance. How are you feeling today? What symptoms or concerns would you like to discuss?", 
-        timestamp: time 
+        content: welcomeMessage, 
+        timestamp: time,
+        audioUrl: welcomeAudioUrl
       }]);
+      
+      // Try to play welcome audio immediately for Arrernte voice mode
+      if (lang === "arrernte" && mode === "voice" && welcomeAudioUrl && !isPlayingWelcomeAudio.current) {
+        isPlayingWelcomeAudio.current = true;
+        setTimeout(() => {
+          const audio = new Audio(welcomeAudioUrl);
+          audio.play()
+            .then(() => {
+              console.log('🎵 Welcome audio played successfully on page load');
+              setWelcomeAudioPlayed(true);
+              isPlayingWelcomeAudio.current = false;
+            })
+            .catch((error) => {
+              console.log('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
+              setShowAudioPrompt(true);
+              isPlayingWelcomeAudio.current = false;
+              // Hide the prompt after 5 seconds
+              setTimeout(() => setShowAudioPrompt(false), 5000);
+            });
+        }, 500); // Small delay to ensure the message is rendered
+      }
     }
     
     // Test backend connection
@@ -162,14 +252,16 @@ export default function Chat() {
       currentMode: mode
     });
     
-    // Announce language and mode
-    setTimeout(() => {
-      speakText(`Chat page ready. Communication mode: ${mode}, Language: ${lang}`);
-    }, 1000);
+    // Note: Removed automatic mode/language announcement to avoid audio conflicts
   }, [mode]);
 
   useEffect(() => {
     try {
+      // Preloader: if replying to last assistant message and non-image mode, show a short loader
+      const lastMsg = messages[messages.length - 1];
+      if (mode !== "images" && lastMsg && lastMsg.role === "assistant") {
+        startTimedLoader(4000);
+      }
       const root = document.documentElement as HTMLElement;
       root.style.setProperty("--app-bg", isDark ? "#0f172a" : "#f9fafb");
       root.style.setProperty("--app-fg", isDark ? "#f8fafc" : "#1f2937");
@@ -179,6 +271,23 @@ export default function Chat() {
   }, [isDark]);
 
   const startRecording = async () => {
+    // Play welcome audio on first interaction for Arrernte voice mode (only if not already played)
+    if (lang === "arrernte" && mode === "voice" && !welcomeAudioPlayed && !isPlayingWelcomeAudio.current) {
+      isPlayingWelcomeAudio.current = true;
+      const welcomeAudioUrl = "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3";
+      try {
+        const audio = new Audio(welcomeAudioUrl);
+        await audio.play();
+        setWelcomeAudioPlayed(true);
+        setShowAudioPrompt(false);
+        isPlayingWelcomeAudio.current = false;
+        console.log('🎵 Welcome audio played successfully on first interaction');
+      } catch (error) {
+        console.log('🎵 Welcome audio play failed:', error);
+        isPlayingWelcomeAudio.current = false;
+      }
+    }
+    
     try {
       console.log('🎙️ Requesting microphone access...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -392,66 +501,82 @@ export default function Chat() {
             ));
           }
           
+          // Preloader: if replying to last assistant message and non-image mode, show a short loader
+          const lastMsg = messages[messages.length - 1];
+          if (mode !== "images" && lastMsg && lastMsg.role === "assistant") {
+            startTimedLoader(4000);
+          }
+
           // Check if this is a final message for disease prediction
           const isFinalMessage = data.is_final_message || false;
           
           let reply: Message;
           if (isFinalMessage) {
-            // Show progress bar and start analysis
-            setShowProgressBar(true);
-            setIsAnalyzing(true);
-            setProgressStep(0);
-            setProgressMessage("Analyzing symptoms...");
-            
-            // Start the progress bar animation
-            simulateProgressBar();
-            
             // Store the disease prediction data
             if (data.disease_prediction) {
               setDiseasePrediction(data.disease_prediction);
             }
-            
-            reply = { 
-              id: Date.now() + 1, 
-              role: "assistant", 
-              content: data.reply, 
-              timestamp: time,
-              audioUrl: data.audio_url // Store audio URL for replay
-            };
-            
-            // Show triage modal after progress bar completes
-            setTimeout(() => {
-              const triage = generateTriageSummary([...messages, userMsg], data.fused_result);
+
+            if (mode === "images") {
+              // Images mode: no loader, show summary immediately
+              reply = { 
+                id: Date.now() + 1, 
+                role: "assistant", 
+                content: data.reply, 
+                timestamp: time,
+                audioUrl: data.audio_url // Store audio URL for replay
+              };
+              const triage = generateTriageSummary([...messages, userMsg], data.disease_prediction);
               setTriageData(triage);
               setShowTriageModal(true);
-              
-              // Voice announcements for assessment results
-              if (mode === "voice") {
-                // First announce that summary is ready
-                speakText("Medical triage summary is ready. Please review the assessment results.");
-                
-                // Then announce the assessment result after a delay
-                setTimeout(() => {
-                  if (data.disease_prediction && data.disease_prediction.diagnosis) {
-                    speakText(`Assessment result: ${data.disease_prediction.diagnosis}`);
-                  }
-                }, 3000);
-                
-                // Then announce doctor visit recommendation
-                setTimeout(() => {
-                  speakText("Please visit a doctor for proper medical evaluation.");
-                }, 6000);
-                
-                // Finally announce the disclaimer
-                setTimeout(() => {
-                  speakText("This is just a preliminary diagnosis. If symptoms persist or worsen, seek immediate medical attention.");
-                }, 9000);
-              } else {
-                // For text mode, just announce summary is ready
-                speakText("Medical triage summary is ready. Please review the assessment results.");
-              }
-            }, 6000);
-            
+              setShowProgressBar(false);
+              setIsAnalyzing(false);
+            } else {
+              // Voice/Text modes: show loader and delay summary to match progress
+              setShowProgressBar(true);
+              setIsAnalyzing(true);
+              setProgressStep(0);
+              setProgressMessage("Analyzing symptoms...");
+              simulateProgressBar();
+
+              reply = { 
+                id: Date.now() + 1, 
+                role: "assistant", 
+                content: data.reply, 
+                timestamp: time,
+                audioUrl: data.audio_url // Store audio URL for replay
+              };
+
+              setTimeout(() => {
+                const triage = generateTriageSummary([...messages, userMsg], data.disease_prediction);
+                setTriageData(triage);
+                setShowTriageModal(true);
+              }, 6000);
+            }
+
+            // Voice announcements for assessment results
+            if (mode === "voice") {
+              // First announce that summary is ready
+              speakText("Medical triage summary is ready. Please review the assessment results.");
+              // Then announce the assessment result after a delay
+              setTimeout(() => {
+                if (data.disease_prediction && data.disease_prediction.diagnosis) {
+                  speakText(`Assessment result: ${data.disease_prediction.diagnosis}`);
+                }
+              }, 3000);
+              // Then announce doctor visit recommendation
+              setTimeout(() => {
+                speakText("Please visit a doctor for proper medical evaluation.");
+              }, 6000);
+              // Finally announce the disclaimer
+              setTimeout(() => {
+                speakText("This is just a preliminary diagnosis. If symptoms persist or worsen, seek immediate medical attention.");
+              }, 9000);
+            } else if (mode !== "images") {
+              // For text mode, just announce summary is ready
+              speakText("Medical triage summary is ready. Please review the assessment results.");
+            }
+
           } else {
             reply = { 
               id: Date.now() + 1, 
@@ -464,9 +589,32 @@ export default function Chat() {
           
           setMessages((m) => [...m, reply]);
           
-          // Speak the response if in voice mode
+          // Play audio for follow-up questions or speak the response if in voice mode
           if (mode === "voice") {
-            speakText(data.reply);
+            // Check if this is a follow-up question and has an audio URL
+            if (data.audio_url && (data.reply.includes('?') || 
+                data.reply.toLowerCase().includes('where') || 
+                data.reply.toLowerCase().includes('how') || 
+                data.reply.toLowerCase().includes('what') || 
+                data.reply.toLowerCase().includes('when') || 
+                data.reply.toLowerCase().includes('do you') || 
+                data.reply.toLowerCase().includes('are you') || 
+                data.reply.toLowerCase().includes('have you'))) {
+              // This is a follow-up question with audio, play the audio file
+              console.log('🎵 Playing follow-up question audio:', data.audio_url);
+              const audio = new Audio(data.audio_url);
+              audio.play()
+                .then(() => {
+                  console.log('🎵 Follow-up question audio played successfully');
+                })
+                .catch((error) => {
+                  console.log('🎵 Follow-up question audio play failed, falling back to TTS:', error);
+                  speakText(data.reply);
+                });
+            } else {
+              // Regular response, use TTS
+              speakText(data.reply);
+            }
           }
           
         } catch (error) {
@@ -726,7 +874,7 @@ export default function Chat() {
         top="50%"
         left="50%"
         transform="translate(-50%, -50%)"
-        zIndex={2000}
+        zIndex={900}
         bg={isDark ? "gray.800" : "white"}
         p={8}
         borderRadius="lg"
@@ -825,6 +973,31 @@ export default function Chat() {
     }, 500);
   };
 
+  // Start a short, timed loader with animated progress over the given duration
+  const startTimedLoader = (durationMs: number) => {
+    setShowProgressBar(true);
+    setIsAnalyzing(true);
+    // There are 5 steps in renderProgressBar; advance evenly across duration
+    const steps = [
+      { message: "Analyzing symptoms...", index: 0 },
+      { message: "Processing medical data...", index: 1 },
+      { message: "Running prediction model...", index: 2 },
+      { message: "Generating recommendations...", index: 3 },
+      { message: "Finalizing assessment...", index: 4 }
+    ];
+    const interval = Math.max(50, Math.floor(durationMs / steps.length));
+    steps.forEach((s, i) => {
+      setTimeout(() => {
+        setProgressStep(s.index);
+        setProgressMessage(s.message);
+      }, i * interval);
+    });
+    setTimeout(() => {
+      setShowProgressBar(false);
+      setIsAnalyzing(false);
+    }, durationMs);
+  };
+
   const generateTriageSummary = (chatHistory: Message[], mlApiData?: any) => {
     const userMessages = chatHistory.filter(m => m.role === "user");
     
@@ -845,10 +1018,12 @@ export default function Chat() {
       severity = severityMapping[final.severity as keyof typeof severityMapping] || 
                 { level: 2, color: 'orange', label: 'Unknown', description: 'Assessment in progress' };
       
-      // Use ML1 disease predictions as possible conditions
-      possibleConditions = ml1.disease_topk?.map((disease: any) => 
-        `${disease.disease} (${Math.round(disease.p * 100)}% confidence)`
-      ) || ["Assessment in progress"];
+      // Use ML1 disease predictions as possible conditions (names only, no confidence)
+      possibleConditions = (ml1.disease_topk?.length
+        ? ml1.disease_topk.map((d: any) => d.disease)
+        : (ml2.top?.length
+            ? ml2.top.map((t: any) => `Label ${t.label}`)
+            : ["Assessment in progress"])) as string[];
       
       // Generate next steps based on ML severity
       nextSteps = [];
@@ -989,34 +1164,44 @@ export default function Chat() {
     
     let reply: Message;
     if (isFinalMessage) {
-        // Show progress bar and start analysis
-        setShowProgressBar(true);
-        setIsAnalyzing(true);
-        setProgressStep(0);
-        setProgressMessage("Analyzing symptoms...");
-        
-        // Start the progress bar animation
-        simulateProgressBar();
-        
         // Store the disease prediction data
         if (data.disease_prediction) {
           setDiseasePrediction(data.disease_prediction);
         }
-        
-      reply = { 
-        id: Date.now() + 1, 
-        role: "assistant", 
-          content: data.reply, 
-        timestamp: time 
-      };
-        
-        // Show triage modal after progress bar completes
-      setTimeout(() => {
-          const triage = generateTriageSummary([...messages, userMsg], data.fused_result);
+
+        if (mode === "images") {
+          // Images mode: no loader, show summary immediately
+          reply = { 
+            id: Date.now() + 1, 
+            role: "assistant", 
+            content: data.reply, 
+            timestamp: time 
+          };
+          const triage = generateTriageSummary([...messages, userMsg], data.disease_prediction);
           setTriageData(triage);
-        setShowTriageModal(true);
-        speakText("Medical triage summary is ready. Please review the assessment results.");
-        }, 6000); // Wait for progress bar to complete (5 steps * 1 second + 0.5 second buffer)
+          setShowTriageModal(true);
+          setShowProgressBar(false);
+          setIsAnalyzing(false);
+          speakText("Medical triage summary is ready. Please review the assessment results.");
+        } else {
+          // Voice/Text modes: show loader and delay summary to match progress
+          setShowProgressBar(true);
+          setIsAnalyzing(true);
+          setProgressStep(0);
+          setProgressMessage("Analyzing symptoms...");
+          simulateProgressBar();
+          reply = { 
+            id: Date.now() + 1, 
+            role: "assistant", 
+            content: data.reply, 
+            timestamp: time 
+          };
+          setTimeout(() => {
+            const triage = generateTriageSummary([...messages, userMsg], data.disease_prediction);
+            setTriageData(triage);
+            setShowTriageModal(true);
+          }, 6000);
+        }
         
     } else {
         reply = { 
@@ -1029,9 +1214,32 @@ export default function Chat() {
       
       setMessages((m) => [...m, reply]);
       
-      // Speak the response if in voice mode
+      // Play audio for follow-up questions or speak the response if in voice mode
       if (mode === "voice") {
-        speakText(data.reply);
+        // Check if this is a follow-up question and has an audio URL
+        if (data.audio_url && (data.reply.includes('?') || 
+            data.reply.toLowerCase().includes('where') || 
+            data.reply.toLowerCase().includes('how') || 
+            data.reply.toLowerCase().includes('what') || 
+            data.reply.toLowerCase().includes('when') || 
+            data.reply.toLowerCase().includes('do you') || 
+            data.reply.toLowerCase().includes('are you') || 
+            data.reply.toLowerCase().includes('have you'))) {
+          // This is a follow-up question with audio, play the audio file
+          console.log('🎵 Playing follow-up question audio:', data.audio_url);
+          const audio = new Audio(data.audio_url);
+          audio.play()
+            .then(() => {
+              console.log('🎵 Follow-up question audio played successfully');
+            })
+            .catch((error) => {
+              console.log('🎵 Follow-up question audio play failed, falling back to TTS:', error);
+              speakText(data.reply);
+            });
+        } else {
+          // Regular response, use TTS
+          speakText(data.reply);
+        }
       }
       
     } catch (error) {
@@ -1065,41 +1273,170 @@ export default function Chat() {
 
   // Images mode: options and flow rendering
   const bodyParts = [
-    { id: "head", name: "Head", en: "Head", arr: "Arrernte Head" },
-    { id: "eyes", name: "Eyes", en: "Eyes", arr: "Arrernte Eyes" },
-    { id: "ears", name: "Ears", en: "Ears", arr: "Arrernte Ears" },
-    { id: "mouth", name: "Mouth", en: "Mouth", arr: "Arrernte Mouth" },
-    { id: "chest", name: "Chest", en: "Chest", arr: "Arrernte Chest" },
-    { id: "stomach", name: "Stomach", en: "Stomach", arr: "Arrernte Stomach" },
-    { id: "arms", name: "Arms", en: "Arms", arr: "Arrernte Arms" },
-    { id: "legs", name: "Legs", en: "Legs", arr: "Arrernte Legs" },
-    { id: "back", name: "Back", en: "Back", arr: "Arrernte Back" },
-    { id: "general", name: "General", en: "General", arr: "Arrernte General" },
+    { id: "head", name: "Head", en: "Head", arr: "Ulpe" },
+    { id: "eyes", name: "Eyes", en: "Eyes", arr: "Irlperle" },
+    { id: "ears", name: "Ears", en: "Ears", arr: "Areye" },
+    { id: "mouth", name: "Mouth", en: "Mouth", arr: "Alkwe" },
+    { id: "chest", name: "Chest", en: "Chest", arr: "Inwenge" },
+    { id: "stomach", name: "Stomach", en: "Stomach", arr: "Atnerte" },
+    { id: "arms", name: "Arms", en: "Arms", arr: "Alyerre" },
+    { id: "legs", name: "Legs", en: "Legs", arr: "Ampe" },
+    { id: "back", name: "Back", en: "Back", arr: "Angwerre" },
+    { id: "general", name: "General", en: "General", arr: "Arrantherre" },
   ];
+  
 
-  const conditions: Record<string, { id: string; name: string }[]> = {
-    head: [ { id: "headache", name: "Headache" }, { id: "dizziness", name: "Dizziness" }, { id: "confusion", name: "Confusion" }, { id: "fever", name: "Fever" } ],
-    eyes: [ { id: "blurry", name: "Blurry Vision" }, { id: "pain", name: "Eye Pain" }, { id: "dry", name: "Dry Eyes" }, { id: "red", name: "Red Eyes" } ],
-    ears: [ { id: "pain", name: "Ear Pain" }, { id: "ringing", name: "Ringing" }, { id: "hearing", name: "Hearing Loss" }, { id: "pressure", name: "Pressure" } ],
-    mouth: [ { id: "toothache", name: "Toothache" }, { id: "sore", name: "Sore Throat" }, { id: "dry", name: "Dry Mouth" }, { id: "taste", name: "Taste Loss" } ],
-    chest: [ { id: "chest_pain", name: "Chest Pain" }, { id: "breathing", name: "Breathing Issues" }, { id: "cough", name: "Cough" }, { id: "heartbeat", name: "Irregular Heartbeat" } ],
-    stomach: [ { id: "stomach_pain", name: "Stomach Pain" }, { id: "nausea", name: "Nausea" }, { id: "diarrhea", name: "Diarrhea" }, { id: "constipation", name: "Constipation" } ],
-    arms: [ { id: "pain", name: "Arm Pain" }, { id: "numbness", name: "Numbness" }, { id: "weakness", name: "Weakness" }, { id: "swelling", name: "Swelling" } ],
-    legs: [ { id: "pain", name: "Leg Pain" }, { id: "numbness", name: "Numbness" }, { id: "weakness", name: "Weakness" }, { id: "swelling", name: "Swelling" } ],
-    back: [ { id: "back_pain", name: "Back Pain" }, { id: "stiffness", name: "Stiffness" }, { id: "spasm", name: "Muscle Spasm" }, { id: "limited", name: "Limited Movement" } ],
-    general: [ { id: "fatigue", name: "Fatigue" }, { id: "weakness", name: "Weakness" }, { id: "fever", name: "Fever" }, { id: "chills", name: "Chills" } ],
+  const conditions: Record<string, { id: string; en: string; arr: string }[]> = {
+    head: [
+      { id: "headache", en: "Headache", arr: "arnterre atnyeneme" }, // head pain
+      { id: "dizziness", en: "Dizziness", arr: "tyerre-irreme" },
+      { id: "confusion", en: "Confusion", arr: "arrantherre aneme" },
+      { id: "fever", en: "Fever", arr: "arnterre arrkayeye" }
+    ],
+    eyes: [
+      { id: "blurry", en: "Blurry Vision", arr: "irlperle arrpenhe atnyeneme" },
+      { id: "pain", en: "Eye Pain", arr: "irlperle atnyeneme" },
+      { id: "dry", en: "Dry Eyes", arr: "irlperle arlenye" },
+      { id: "red", en: "Red Eyes", arr: "irlperle rertwe" }
+    ],
+    ears: [
+      { id: "pain", en: "Ear Pain", arr: "areye atnyeneme" },
+      { id: "ringing", en: "Ringing", arr: "areye irrpeme" },
+      { id: "hearing", en: "Hearing Loss", arr: "areye mapeme" },
+      { id: "pressure", en: "Pressure", arr: "areye ilpepe" }
+    ],
+    mouth: [
+      { id: "toothache", en: "Toothache", arr: "alkwe atnyeneme" },
+      { id: "sore", en: "Sore Throat", arr: "alkwe angkeme atnyeneme" },
+      { id: "dry", en: "Dry Mouth", arr: "alkwe arlenye" },
+      { id: "taste", en: "Taste Loss", arr: "alkwe mapeme" }
+    ],
+    chest: [
+      { id: "chest_pain", en: "Chest Pain", arr: "inwenge atnyeneme" },
+      { id: "breathing", en: "Breathing Issues", arr: "inwenge ilpemeye" },
+      { id: "cough", en: "Cough", arr: "akngetyeme" },
+      { id: "heartbeat", en: "Irregular Heartbeat", arr: "inwenge arntarneme" }
+    ],
+    stomach: [
+      { id: "stomach_pain", en: "Stomach Pain", arr: "atnerte atnyeneme" },
+      { id: "nausea", en: "Nausea", arr: "atnerte artwe-irre" },
+      { id: "diarrhea", en: "Diarrhea", arr: "atnerte akaltyeme" },
+      { id: "constipation", en: "Constipation", arr: "atnerte aneme akaltye" }
+    ],
+    arms: [
+      { id: "pain", en: "Arm Pain", arr: "alyerre atnyeneme" },
+      { id: "numbness", en: "Numbness", arr: "alyerre mpwareke" },
+      { id: "weakness", en: "Weakness", arr: "alyerre tyerrtye" },
+      { id: "swelling", en: "Swelling", arr: "alyerre aperrne" }
+    ],
+    legs: [
+      { id: "pain", en: "Leg Pain", arr: "ampe atnyeneme" },
+      { id: "numbness", en: "Numbness", arr: "ampe mpwareke" },
+      { id: "weakness", en: "Weakness", arr: "ampe tyerrtye" },
+      { id: "swelling", en: "Swelling", arr: "ampe aperrne" }
+    ],
+    back: [
+      { id: "back_pain", en: "Back Pain", arr: "angwerre atnyeneme" },
+      { id: "stiffness", en: "Stiffness", arr: "angwerre apetyewarre" },
+      { id: "spasm", en: "Muscle Spasm", arr: "angwerre artetye" },
+      { id: "limited", en: "Limited Movement", arr: "angwerre mpwareke-irreme" }
+    ],
+    general: [
+      { id: "fatigue", en: "Fatigue", arr: "arrantherre akaltyeme" },
+      { id: "weakness", en: "Weakness", arr: "arrantherre tyerrtye" },
+      { id: "fever", en: "Fever", arr: "arnterre arrkayeye" },
+      { id: "chills", en: "Chills", arr: "arrantherre arrkwethe" }
+    ],
   };
+  
 
   const durations = [
-    { id: "today", name: "Today" },
-    { id: "1-2", name: "1-2 days" },
-    { id: "3-7", name: "3-7 days" },
-    { id: "1-2weeks", name: "1-2 weeks" },
-    { id: "2-4weeks", name: "2-4 weeks" },
-    { id: "1month+", name: "1+ months" },
+    { id: "today", en: "Today", arr: "Alheme nhenhe" },             // today / now
+    { id: "1-2", en: "1-2 days", arr: "Uterne mpwareke 1–2" },      // 1–2 days
+    { id: "3-7", en: "3-7 days", arr: "Uterne mpwareke 3–7" },      // 3–7 days
+    { id: "1-2weeks", en: "1-2 weeks", arr: "Uterne mpeke 1–2" },   // 1–2 weeks
+    { id: "2-4weeks", en: "2-4 weeks", arr: "Uterne mpeke 2–4" },   // 2–4 weeks
+    { id: "1month+", en: "1+ months", arr: "Uterne mpeke atnyeme 1+" } // 1+ months / long time
   ];
 
+  // Auto-finalize images flow: when last step is reached for last selected part,
+  // automatically send summary to backend and show progress/popup
+  useEffect(() => {
+    const shouldAutoFinalize =
+      mode === "images" &&
+      !finishedImagesFlow &&
+      imageFlowStep === 4 &&
+      (currentBodyPartIndex + 1 >= selectedBodyParts.length);
+
+    if (!shouldAutoFinalize) return;
+
+    const currentPartId = selectedBodyParts[currentBodyPartIndex] || selectedBodyPart;
+    const partName = bodyParts.find(b => b.id === currentPartId)?.en || currentPartId;
+    const condName = (conditions[selectedBodyPart] || []).find(c => c.id === selectedCondition)?.name || selectedCondition;
+    const durName = durations.find(d => d.id === selectedDuration)?.name || selectedDuration;
+    const summary = `${partName} - ${condName} (Intensity: ${symptomIntensity}/10, Duration: ${durName})`;
+
+    const finalize = async () => {
+      setFinishedImagesFlow(true);
+      addUserMessage(`Symptom: ${summary}`);
+      try {
+        // Images mode: show short loader before API call (5s)
+        startTimedLoader(5000);
+
+        const response = await fetch('http://localhost:5000/api/chat/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Language': 'english',
+            'X-Mode': 'images'
+          },
+          body: JSON.stringify({
+            message: '',
+            selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
+            final: true,
+            _context: { language: 'english', mode: 'images' }
+          })
+        });
+        const data = await response.json();
+        console.log('🧪 Images auto-finalize: raw API data', data);
+        const triageSource = data?.fused_result ?? data?.disease_prediction;
+        if (data?.is_final_message && triageSource) {
+          console.log('🧪 Images auto-finalize: API success payload', {
+            fused_result: data.fused_result,
+            disease_prediction: data.disease_prediction
+          });
+          if (data.disease_prediction) setDiseasePrediction(data.disease_prediction);
+          const triage = generateTriageSummary(
+            [...messages, { id: Date.now(), role: 'assistant', content: 'Images summary', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }],
+            triageSource
+          );
+          console.log('🧪 Images auto-finalize: triage generated', triage);
+          setTriageData(triage);
+          setShowTriageModal(true);
+          console.log('🧪 Images auto-finalize: triage modal shown');
+        } else {
+          console.log('🧪 Images auto-finalize: no triageSource found or not final message', {
+            is_final_message: data?.is_final_message,
+            has_fused_result: Boolean(data?.fused_result),
+            has_disease_prediction: Boolean(data?.disease_prediction)
+          });
+        }
+        // Timed loader will stop itself
+      } catch (e) {
+        console.error('Images mode auto-finalize error', e);
+        setShowProgressBar(false);
+        setIsAnalyzing(false);
+      }
+    };
+
+    finalize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageFlowStep, currentBodyPartIndex, selectedBodyParts.length, finishedImagesFlow, mode]);
+
   const renderImagesFlow = () => {
+    if (finishedImagesFlow) {
+      return <Text>Assessment generated. Please check the popup.</Text>;
+    }
     if (imageFlowStep === 0) {
       return (
         <>
@@ -1121,19 +1458,43 @@ export default function Chat() {
                 </Box>
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{en}</Text>
-                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{arr}</Text>
+                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
                 </Box>
               </Box>
             );})}
           </Flex>
           <Flex mt={4} gap={3} align="center">
-            <IconButton aria-label="Proceed" icon={<FaCheck />} colorScheme="green" isRound size="lg" isDisabled={selectedBodyParts.length === 0}
-              onClick={() => {
-                setCurrentBodyPartIndex(0);
-                setSelectedBodyPart(selectedBodyParts[0]);
-                setImageFlowStep(1);
-                addUserMessage(`Selected parts: ${selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.name).join(", ")}`);
-              }} />
+          <Button
+  aria-label="Proceed"
+  borderRadius="full"
+  size="lg"
+  disabled={selectedBodyParts.length === 0}
+  style={{
+    backgroundColor: "green",
+    color: "white",
+    width: "48px",
+    height: "48px",
+    padding: 0,
+    minWidth: "48px",
+    border: "none",
+    cursor: selectedBodyParts.length === 0 ? "not-allowed" : "pointer",
+  }}
+  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "darkgreen")}
+  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "green")}
+  onClick={() => {
+    setCurrentBodyPartIndex(0);
+    setSelectedBodyPart(selectedBodyParts[0]);
+    setImageFlowStep(1);
+    addUserMessage(
+      `Selected parts: ${selectedBodyParts
+        .map((id) => bodyParts.find((b) => b.id === id)?.name)
+        .join(", ")}`
+    );
+  }}
+>
+  <FaCheck />
+</Button>
+
             {selectedBodyParts.length > 0 && (
               <Text fontSize="sm" color={isDark ? "gray.300" : "gray.600"}>{selectedBodyParts.length} selected</Text>
             )}
@@ -1154,20 +1515,20 @@ export default function Chat() {
             </Box>
             <Box p={2} textAlign="center">
               <Text fontWeight="semibold">{currentPartName}</Text>
-              <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {currentPartName}</Text>
+              <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? `Arrernte ${currentPartName}` : currentPartName}</Text>
             </Box>
           </Box>
           <Flex wrap="wrap" gap={3}>
-            {opts.map(({ id, name }) => (
-              <Box key={id} role="button" onClick={() => { setSelectedCondition(id); setImageFlowStep(2); addUserMessage(`Condition: ${name}`); }}
+            {opts.map(({ id, en, arr }) => (
+              <Box key={id} role="button" onClick={() => { setSelectedCondition(id); setImageFlowStep(2); addUserMessage(`Condition: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
                 <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {name}</Text>
+                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {en}</Text>
                 </Box>
                 <Box p={2} textAlign="center">
-                  <Text fontWeight="semibold">{name}</Text>
-                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {name}</Text>
+                  <Text fontWeight="semibold">{en}</Text>
+                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
                 </Box>
               </Box>
             ))}
@@ -1183,10 +1544,14 @@ export default function Chat() {
             <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
               <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
             </Box>
-            <Box p={2} textAlign="center">
-              <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
-              <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
-            </Box>
+                <Box p={2} textAlign="center">
+                  <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
+                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>
+                    {lang === "arrernte"
+                      ? `Arrernte ${bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}`
+                      : bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}
+                  </Text>
+                </Box>
           </Box>
           <Flex wrap="wrap" gap={3}>
             {Array.from({ length: 10 }).map((_, idx) => {
@@ -1199,9 +1564,7 @@ export default function Chat() {
                        h={{ base: "60px", md: "70px" }} display="flex" alignItems="center" justifyContent="center">
                     <Text fontWeight="bold">{v}</Text>
                   </Box>
-                  <Box p={2} textAlign="center">
-                    <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {v}</Text>
-                  </Box>
+                  
                 </Box>
               );
             })}
@@ -1223,16 +1586,16 @@ export default function Chat() {
             </Box>
           </Box>
           <Flex wrap="wrap" gap={3}>
-            {durations.map(({ id, name }) => (
-              <Box key={id} role="button" onClick={() => { setSelectedDuration(id); setImageFlowStep(4); addUserMessage(`Duration: ${name}`); }}
+            {durations.map(({ id, en, arr }) => (
+              <Box key={id} role="button" onClick={() => { setSelectedDuration(id); setImageFlowStep(4); addUserMessage(`Duration: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
                 <Box bg={isDark ? "gray.600" : "gray.300"} h={{ base: "80px", md: "100px" }} display="flex" alignItems="center" justifyContent="center">
-                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {name}</Text>
+                  <Text fontSize="sm" color={isDark ? "gray.200" : "gray.700"}>Image: {en}</Text>
                 </Box>
                 <Box p={2} textAlign="center">
-                  <Text fontWeight="semibold">{name}</Text>
-                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {name}</Text>
+                  <Text fontWeight="semibold">{en}</Text>
+                  <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
                 </Box>
               </Box>
             ))}
@@ -1251,9 +1614,8 @@ export default function Chat() {
         <Text fontWeight="semibold">Summary</Text>
         <Text>{summary}</Text>
         <Flex gap={2}>
-          <Button colorScheme="teal" leftIcon={<FaCheck />} onClick={() => {
+          <Button colorScheme="green" leftIcon={<FaCheck />} onClick={async () => {
             addUserMessage(`Symptom: ${summary}`);
-            // Move to next selected part or finish
             const nextIndex = currentBodyPartIndex + 1;
             if (nextIndex < selectedBodyParts.length) {
               setCurrentBodyPartIndex(nextIndex);
@@ -1262,15 +1624,54 @@ export default function Chat() {
               setSymptomIntensity(5);
               setSelectedDuration("");
               setImageFlowStep(1);
-            } else {
-              // Finished all
-              setImageFlowStep(0);
-              setSelectedBodyPart("");
-              setSelectedBodyParts([]);
-              setCurrentBodyPartIndex(0);
-              setSelectedCondition("");
-              setSymptomIntensity(5);
-              setSelectedDuration("");
+              return;
+            }
+            // Finalize once
+            setFinishedImagesFlow(true);
+            try {
+              // Images mode: show short loader before API call (5s)
+              startTimedLoader(5000);
+              const response = await fetch('http://localhost:5000/api/chat/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-Language': 'english',
+                  'X-Mode': 'images'
+                },
+                body: JSON.stringify({
+                  message: '',
+                  selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
+                  final: true,
+                  _context: { language: 'english', mode: 'images' }
+                })
+              });
+              const data = await response.json();
+              console.log('🧪 Images manual Done: raw API data', data);
+              const triageSource = data?.fused_result ?? data?.disease_prediction;
+              if (data?.is_final_message && triageSource) {
+                console.log('🧪 Images manual Done: API success payload', {
+                  fused_result: data.fused_result,
+                  disease_prediction: data.disease_prediction
+                });
+                // Timed loader is already running; no additional loader
+                if (data.disease_prediction) setDiseasePrediction(data.disease_prediction);
+                const triage = generateTriageSummary(
+                  [...messages, { id: Date.now(), role: 'assistant', content: 'Images summary', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }],
+                  triageSource
+                );
+                console.log('🧪 Images manual Done: triage generated', triage);
+                setTriageData(triage);
+                setShowTriageModal(true);
+                console.log('🧪 Images manual Done: triage modal shown');
+              } else {
+                console.log('🧪 Images manual Done: no triageSource found or not final message', {
+                  is_final_message: data?.is_final_message,
+                  has_fused_result: Boolean(data?.fused_result),
+                  has_disease_prediction: Boolean(data?.disease_prediction)
+                });
+              }
+            } catch (e) {
+              console.error('Images mode finalize error', e);
             }
           }}>Done</Button>
         </Flex>
@@ -1280,6 +1681,56 @@ export default function Chat() {
 
   return (
     <Container maxW="100%" minH="100vh" display="flex" flexDir="column" py={2} px={4} position="relative" {...contrastStyles}>
+      {/* Audio Prompt for Arrernte Voice Mode */}
+      {showAudioPrompt && lang === "arrernte" && mode === "voice" && (
+        <Box
+          position="fixed"
+          top="50%"
+          left="50%"
+          transform="translate(-50%, -50%)"
+          bg={isDark ? "gray.800" : "white"}
+          color={isDark ? "white" : "black"}
+          p={6}
+          borderRadius="lg"
+          shadow="xl"
+          border="2px solid"
+          borderColor="teal.500"
+          zIndex={2000}
+          textAlign="center"
+          maxW="400px"
+        >
+          <Text fontSize="lg" fontWeight="bold" mb={3}>
+            🎵 Tap to hear welcome message
+          </Text>
+          <Text fontSize="sm" mb={4}>
+            Click the microphone button to hear the Arrernte welcome message
+          </Text>
+          <Button
+            colorScheme="teal"
+            onClick={() => {
+              setShowAudioPrompt(false);
+              // Trigger the welcome audio play
+              if (!welcomeAudioPlayed && !isPlayingWelcomeAudio.current) {
+                isPlayingWelcomeAudio.current = true;
+                const audio = new Audio("http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3");
+                audio.play()
+                  .then(() => {
+                    setWelcomeAudioPlayed(true);
+                    isPlayingWelcomeAudio.current = false;
+                    console.log('🎵 Welcome audio played from prompt');
+                  })
+                  .catch((error) => {
+                    console.error('🎵 Welcome audio play failed from prompt:', error);
+                    isPlayingWelcomeAudio.current = false;
+                  });
+              }
+            }}
+          >
+            Play Welcome Audio
+          </Button>
+        </Box>
+      )}
+      
       {/* Accessibility Controls */}
       <Box 
         position="fixed" 
@@ -1637,6 +2088,147 @@ export default function Chat() {
               >
                 <FaMicrophone />
               </IconButton>
+              {lang === "arrernte" && (
+                <>
+                  <input
+                    id="arr-upload"
+                    type="file"
+                    accept="audio/*"
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const inputEl = e.currentTarget as HTMLInputElement;
+                      const file = inputEl.files?.[0];
+                      if (!file) return;
+                      try {
+                        const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        // Show a placeholder user message
+                        const userMsg = { id: Date.now(), role: "user" as const, content: "[Uploaded audio]", timestamp: time };
+                        setMessages((m) => [...m, userMsg]);
+                        
+                        // Show analyzing placeholder message
+                        const analyzingMsg = { 
+                          id: Date.now() + 0.5, 
+                          role: "assistant" as const, 
+                          content: "🔍 Analyzing audio... Please wait while I process your message.", 
+                          timestamp: time 
+                        };
+                        setMessages((m) => [...m, analyzingMsg]);
+                        const formData = new FormData();
+                        formData.append('audio', file, file.name);
+                        formData.append('language', 'arrernte');
+                        formData.append('mode', 'voice');
+
+                        const response = await fetch('http://localhost:5000/api/chat/', {
+                          method: 'POST',
+                          headers: {
+                            'X-Language': 'arrernte',
+                            'X-Mode': 'voice',
+                          },
+                          body: formData
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const data = await response.json();
+
+                        // Replace placeholder with transcribed text if any
+                        if (data.transcribed_text) {
+                          setMessages((m) => m.map(msg => msg.id === userMsg.id ? { ...msg, content: data.transcribed_text } : msg));
+                        }
+
+                        // Replace the analyzing placeholder with the actual response
+                        const reply: Message = {
+                          id: Date.now() + 1,
+                          role: 'assistant',
+                          content: data.reply,
+                          timestamp: time,
+                          audioUrl: data.audio_url || undefined,
+                        };
+                        setMessages((m) => m.map(msg => msg.id === analyzingMsg.id ? reply : msg));
+                        
+                        // Check if this is a final message for disease prediction
+                        const isFinalMessage = data.is_final_message || false;
+                        
+                        if (isFinalMessage) {
+                          // Store the disease prediction data
+                          if (data.disease_prediction) {
+                            setDiseasePrediction(data.disease_prediction);
+                          }
+
+                          // Show loader and delay summary to match progress
+                          setShowProgressBar(true);
+                          setIsAnalyzing(true);
+                          setProgressStep(0);
+                          setProgressMessage("Analyzing symptoms...");
+
+                          // Simulate progress steps
+                          const progressSteps = [
+                            { message: "Analyzing symptoms...", progress: 20 },
+                            { message: "Processing medical data...", progress: 40 },
+                            { message: "Running ML models...", progress: 60 },
+                            { message: "Generating assessment...", progress: 80 },
+                            { message: "Finalizing results...", progress: 100 }
+                          ];
+
+                          progressSteps.forEach((step, index) => {
+                            setTimeout(() => {
+                              setProgressStep(step.progress);
+                              setProgressMessage(step.message);
+                            }, index * 1200);
+                          });
+
+                          // Show triage summary after delay
+                          setTimeout(() => {
+                            const triage = generateTriageSummary([...messages, userMsg], data.disease_prediction);
+                            setTriageData(triage);
+                            setShowTriageModal(true);
+                            setShowProgressBar(false);
+                            setIsAnalyzing(false);
+                          }, 6000);
+
+                          // Voice announcements for assessment results
+                          speakText("Medical triage summary is ready. Please review the assessment results.");
+                          setTimeout(() => {
+                            if (data.disease_prediction && data.disease_prediction.final) {
+                              speakText(`Assessment result: ${data.disease_prediction.final.disease_label}`);
+                            }
+                          }, 3000);
+                          setTimeout(() => {
+                            speakText("Please visit a doctor for proper medical evaluation.");
+                          }, 6000);
+                        }
+                        
+                        if (mode === 'voice' && data.audio_url) {
+                          const audio = new Audio(data.audio_url);
+                          audio.play().catch(console.error);
+                        }
+                      } catch (err) {
+                        console.error('Upload voice error:', err);
+                        const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                        setMessages((m) => [...m, { id: Date.now() + 1, role: 'assistant', content: 'Failed to process uploaded audio. Please try again.', timestamp: time }]);
+                      } finally {
+                        inputEl.value = '';
+                      }
+                    }}
+                  />
+                  <IconButton
+                    aria-label="Upload Arrernte audio"
+                    onClick={() => document.getElementById('arr-upload')?.click()}
+                    ml={2}
+                    bg={isDark ? 'blue.400' : 'blue.600'}
+                    _hover={{ bg: isDark ? 'blue.300' : 'blue.700' }}
+                    _focus={{ boxShadow: '0 0 0 4px rgba(66, 153, 225, 0.6)', outline: 'none' }}
+                    color={isDark ? 'gray.900' : 'white'}
+                    size="lg"
+                    w="50px"
+                    h="50px"
+                    fontSize="lg"
+                    tabIndex={0}
+                    title="Upload Arrernte audio"
+                  >
+                    <FaThumbtack />
+                  </IconButton>
+                </>
+              )}
               {isRecording && (
                 <IconButton
                   aria-label={isPaused ? "Resume recording (Press Enter)" : "Pause recording (Press Enter)"}
@@ -1868,12 +2460,7 @@ export default function Chat() {
                 {/* ML API Results */}
                 {triageData?.mlResults && (
                   <Box>
-                    <Heading size="md" mb={3} display="flex" alignItems="center" gap={2}>
-                      <FaRobot color="purple" />
-                      Advanced AI Analysis
-                    </Heading>
-                    
-                    {/* Final Diagnosis */}
+                    {/* Final AI Diagnosis only */}
                     <Box mb={4}>
                       <Heading size="sm" mb={2} color={isDark ? "purple.200" : "purple.800"}>
                         🎯 Final AI Diagnosis
@@ -1889,93 +2476,11 @@ export default function Chat() {
                           <Text fontWeight="bold" fontSize="lg" color={isDark ? "purple.200" : "purple.800"}>
                             {triageData.mlResults.fusion.finalDiagnosis}
                           </Text>
-                          <Badge colorScheme="purple" fontSize="sm">
-                            {triageData.mlResults.fusion.finalProbability}% confidence
-                          </Badge>
                         </HStack>
-                        <Text fontSize="sm" color={isDark ? "purple.300" : "purple.700"}>
-                          Source: {triageData.mlResults.fusion.source} | Policy: {triageData.mlResults.fusion.policy}
-                        </Text>
+                        {/* Source/policy intentionally hidden as requested */}
                       </Box>
                     </Box>
-
-                    {/* ML1 Results */}
-                    <Box mb={4}>
-                      <Heading size="sm" mb={2} color={isDark ? "blue.200" : "blue.800"}>
-                        🤖 AI Model 1 (Severity & Disease Analysis)
-                      </Heading>
-                      <Box 
-                        bg={isDark ? "blue.900" : "blue.100"} 
-                        p={4} 
-                        borderRadius="md"
-                        border="1px solid"
-                        borderColor={isDark ? "blue.700" : "blue.300"}
-                      >
-                        <HStack justify="space-between" mb={3}>
-                          <Text fontWeight="semibold" color={isDark ? "blue.200" : "blue.800"}>
-                            Severity: {triageData.mlResults.ml1.severity}
-                          </Text>
-                          <Badge colorScheme="blue" fontSize="sm">
-                            {triageData.mlResults.ml1.confidence}% confidence
-                          </Badge>
-                        </HStack>
-                        
-                        <Text fontSize="sm" color={isDark ? "blue.300" : "blue.700"} mb={3}>
-                          Top Disease Predictions:
-                        </Text>
-                        <VStack spacing={2} align="stretch">
-                          {triageData.mlResults.ml1.diseases.map((disease: any, index: number) => (
-                            <HStack key={index} justify="space-between" p={2} bg={isDark ? "blue.800" : "blue.50"} borderRadius="sm">
-                              <Text fontSize="sm" color={isDark ? "blue.200" : "blue.800"}>
-                                {disease.disease}
-                              </Text>
-                              <Text fontSize="sm" color={isDark ? "blue.300" : "blue.600"}>
-                                {Math.round(disease.p * 100)}%
-                              </Text>
-                            </HStack>
-                          ))}
-                        </VStack>
-                      </Box>
-                    </Box>
-
-                    {/* ML2 Results */}
-                    <Box mb={4}>
-                      <Heading size="sm" mb={2} color={isDark ? "green.200" : "green.800"}>
-                        🧠 AI Model 2 (Alternative Analysis)
-                      </Heading>
-                      <Box 
-                        bg={isDark ? "green.900" : "green.100"} 
-                        p={4} 
-                        borderRadius="md"
-                        border="1px solid"
-                        borderColor={isDark ? "green.700" : "green.300"}
-                      >
-                        <HStack justify="space-between" mb={3}>
-                          <Text fontWeight="semibold" color={isDark ? "green.200" : "green.800"}>
-                            Primary Prediction: Label {triageData.mlResults.ml2.predictedLabel}
-                          </Text>
-                          <Badge colorScheme="green" fontSize="sm">
-                            {triageData.mlResults.ml2.probability}% confidence
-                          </Badge>
-                        </HStack>
-                        
-                        <Text fontSize="sm" color={isDark ? "green.300" : "green.700"} mb={3}>
-                          Alternative Predictions:
-                        </Text>
-                        <VStack spacing={2} align="stretch">
-                          {triageData.mlResults.ml2.alternatives.map((alt: any, index: number) => (
-                            <HStack key={index} justify="space-between" p={2} bg={isDark ? "green.800" : "green.50"} borderRadius="sm">
-                              <Text fontSize="sm" color={isDark ? "green.200" : "green.800"}>
-                                Label {alt.label}
-                              </Text>
-                              <Text fontSize="sm" color={isDark ? "green.300" : "green.600"}>
-                                {Math.round(alt.probability * 100)}%
-                              </Text>
-                            </HStack>
-                          ))}
-                        </VStack>
-                      </Box>
-                    </Box>
+                    {/* ML1/ML2 sections removed as requested */}
                   </Box>
                 )}
 
@@ -2452,8 +2957,8 @@ export default function Chat() {
       
       {/* Progress Bar for Disease Prediction */}
       {renderProgressBar()}
-      
-      {/* No modal for images mode; selections appear inline above */}
+
+      {/* Removed duplicate triage overlay that blocked scrolling of the main modal */}
     </Container>
   );
 }

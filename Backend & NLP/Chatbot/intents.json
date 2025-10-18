@@ -525,6 +525,40 @@
             },
             "entityType": "GeneralWeakness",
             "entities": []
+            },
+            {
+            "intent": "General_Followup",
+            "text": [
+            "I need help",
+            "Not sure how to say it",
+            "I don't know what's wrong",
+            "I'm not sure",
+            "Can you help me figure it out",
+            "I feel unwell",
+            "Something is off",
+            "I'm concerned about my health",
+            "I have an issue but not sure"
+            ],
+            "responses": [
+            "I’m here to help. Could you describe what you’re experiencing in your own words?",
+            "Let’s start broadly. Are you having pain, fever, cough, stomach issues, skin changes, or fatigue?",
+            "When did this begin, and has it been getting better, worse, or staying the same?",
+            "On a scale of 1–10, how severe is it right now?",
+            "Where in your body do you notice this the most?",
+            "Have you noticed any red-flag symptoms like severe chest pain, difficulty breathing, high fever, confusion, or fainting?"
+            ],
+            "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+            },
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "GeneralFollowup",
+            "clear": false
+            },
+            "entityType": "NA",
+            "entities": []
             }
 
       ]
