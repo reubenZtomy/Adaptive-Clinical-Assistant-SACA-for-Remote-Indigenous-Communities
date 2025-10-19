@@ -15,6 +15,7 @@ torch>=1.9.0
 nltk>=3.8
 numpy>=1.21.0
 scikit-learn>=1.0.0
+xgboost>=3.0.0
 
 # Translation and audio processing (optional)
 faster-whisper>=0.10.0

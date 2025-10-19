@@ -34,7 +34,7 @@ export default function Chat() {
         setUser(JSON.parse(storedUser));
       } catch (err) {
         localStorage.removeItem("user");
-        localStorage.removeItem("token");
+        localStorage.removeItem("access_token");
       }
     }
   }, []);
@@ -140,7 +140,7 @@ export default function Chat() {
               isPlayingWelcomeAudio.current = false;
             })
             .catch((error) => {
-              console.log('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
+              console.warn('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
               setShowAudioPrompt(true);
               isPlayingWelcomeAudio.current = false;
               // Hide the prompt after 5 seconds
@@ -234,7 +234,7 @@ export default function Chat() {
               isPlayingWelcomeAudio.current = false;
             })
             .catch((error) => {
-              console.log('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
+              console.warn('🎵 Welcome audio blocked by browser, will play on first interaction:', error);
               setShowAudioPrompt(true);
               isPlayingWelcomeAudio.current = false;
               // Hide the prompt after 5 seconds
@@ -254,7 +254,7 @@ export default function Chat() {
           console.log('❌ Backend connection failed:', response.status);
         }
       } catch (error) {
-        console.log('❌ Backend connection error:', error);
+        console.warn('❌ Backend connection error:', error);
       }
     };
     
@@ -296,7 +296,7 @@ export default function Chat() {
         isPlayingWelcomeAudio.current = false;
         console.log('🎵 Welcome audio played successfully on first interaction');
       } catch (error) {
-        console.log('🎵 Welcome audio play failed:', error);
+        console.warn('🎵 Welcome audio play failed:', error);
         isPlayingWelcomeAudio.current = false;
       }
     }
@@ -477,9 +477,11 @@ export default function Chat() {
             formDataKeys: Array.from(formData.keys())
           });
           
+          const token = localStorage.getItem("access_token");
           const response = await fetch('http://localhost:5000/api/chat/', {
             method: 'POST',
             headers: {
+              'Authorization': token ? `Bearer ${token}` : '',
               'X-Language': lang,
               'X-Mode': mode,
             },
@@ -1144,10 +1146,12 @@ export default function Chat() {
       });
       
       // Call the backend chat API
+      const token = localStorage.getItem("access_token");
       const response = await fetch('http://localhost:5000/api/chat/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
           'X-Language': lang,
           'X-Mode': mode,
         },
@@ -1447,10 +1451,12 @@ export default function Chat() {
         // Images mode: show short loader before API call (5s)
         startTimedLoader(5000);
 
+        const token = localStorage.getItem("access_token");
         const response = await fetch('http://localhost:5000/api/chat/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
             'X-Language': 'english',
             'X-Mode': 'images'
           },
@@ -1693,10 +1699,12 @@ export default function Chat() {
             try {
               // Images mode: show short loader before API call (5s)
               startTimedLoader(5000);
+              const token = localStorage.getItem("access_token");
               const response = await fetch('http://localhost:5000/api/chat/', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
+                  'Authorization': token ? `Bearer ${token}` : '',
                   'X-Language': 'english',
                   'X-Mode': 'images'
                 },
@@ -2171,9 +2179,11 @@ export default function Chat() {
                         formData.append('language', 'arrernte');
                         formData.append('mode', 'voice');
 
+                        const token = localStorage.getItem("access_token");
                         const response = await fetch('http://localhost:5000/api/chat/', {
                           method: 'POST',
                           headers: {
+                            'Authorization': token ? `Bearer ${token}` : '',
                             'X-Language': 'arrernte',
                             'X-Mode': 'voice',
                           },

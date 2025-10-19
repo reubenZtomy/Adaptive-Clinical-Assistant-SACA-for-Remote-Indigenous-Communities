@@ -57,6 +57,27 @@ export default function History() {
     fetchPredictions();
   }, [navigate]);
 
+  // Refresh predictions when page becomes visible (user navigates back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchPredictions();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchPredictions();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
   // Sort predictions when sortBy changes
   useEffect(() => {
     sortPredictions();
@@ -66,17 +87,30 @@ export default function History() {
     try {
       setLoading(true);
       const token = localStorage.getItem("access_token");
+      console.log("Fetching predictions with token:", token ? "present" : "missing");
+      
       const response = await fetch(`${API_BASE_URL}/auth/predictions`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
+      console.log("Predictions response status:", response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log("Predictions data received:", data);
         setPredictions(data.predictions || []);
         setError("");
+      } else if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        console.log("Token expired, redirecting to login");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+        navigate("/login");
+        return;
       } else {
+        console.log("Failed to fetch predictions:", response.status, response.statusText);
         setError("Failed to fetch predictions");
       }
     } catch (err) {
@@ -100,6 +134,12 @@ export default function History() {
 
       if (response.ok) {
         setPredictions(predictions.filter((p) => p.id !== id));
+      } else if (response.status === 401) {
+        // Token expired or invalid, redirect to login
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("user");
+        navigate("/login");
+        return;
       } else {
         setError("Failed to delete prediction");
       }

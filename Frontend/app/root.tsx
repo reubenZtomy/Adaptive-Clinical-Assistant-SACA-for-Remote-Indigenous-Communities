@@ -25,6 +25,11 @@ export const links: Route.LinksFunction = () => [
   },
 ];
 
+export const meta: Route.MetaFunction = () => [
+  { title: "SACA Clinical Assistant" },
+  { name: "description", content: "Adaptive Clinical Assistant for Remote Indigenous Communities" },
+];
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const system = createSystem(defaultConfig);
   return (

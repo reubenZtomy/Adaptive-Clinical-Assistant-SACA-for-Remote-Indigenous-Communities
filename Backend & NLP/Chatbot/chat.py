@@ -56,7 +56,8 @@ with INTENTS_PATH.open("r", encoding="utf-8") as f:
 intents_list = get_intents(intents_doc)
 
 if torch is not None:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Force CPU-only mode to avoid CUDA DLL issues on Windows
+    device = torch.device("cpu")
     # Expect a training artifact dict with sizes, vocab, tags, and model_state
     data = torch.load(str(DATA_PATH), map_location=device)
     input_size = data["input_size"]
@@ -800,12 +801,17 @@ def predict_tag(msg: str):
     if torch is None or model is None:
         # Fallback to simple keyword matching when PyTorch is not available
         msg_lower = msg.lower()
+        print(f"[DEBUG] Processing message: '{msg}' (lowercase: '{msg_lower}')")
         for intent in intents_list:
             # Check both "patterns" and "text" keys for compatibility
             patterns = intent.get("patterns", intent.get("text", []))
+            intent_name = intent.get("tag", intent.get("intent", "unknown"))
+            print(f"[DEBUG] Checking intent '{intent_name}' with patterns: {patterns}")
             for pattern in patterns:
                 if pattern.lower() in msg_lower:
-                    return intent.get("tag", intent.get("intent", "general")), 0.8  # Return a reasonable confidence
+                    print(f"[DEBUG] MATCH FOUND! Pattern '{pattern}' found in message. Returning intent: '{intent_name}'")
+                    return intent_name, 0.8  # Return a reasonable confidence
+        print(f"[DEBUG] No pattern matches found. Returning 'general'")
         return "general", 0.5  # Default fallback
     
     tokens = tokenize(msg)
@@ -855,6 +861,7 @@ def route_message(user_text: str) -> str:
 
     # Otherwise classify new message
     tag, conf = predict_tag(user_text)
+    print(f"[DEBUG] Predicted tag: '{tag}' with confidence: {conf}")
 
     # If user only sent a number 1-10, assume it's a severity answer – start general flow
     if re.fullmatch(r"\s*(10|[1-9])\s*", user_text):

@@ -98,7 +98,8 @@ with INTENTS_PATH.open("r", encoding="utf-8") as f:
 intents_list = get_intents(intents_doc)
 
 if torch is not None:
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Force CPU-only mode to avoid CUDA DLL issues on Windows
+    device = torch.device("cpu")
     # Expect a training artifact dict with sizes, vocab, tags, and model_state
     data = torch.load(str(DATA_PATH), map_location=device)
     input_size = data["input_size"]

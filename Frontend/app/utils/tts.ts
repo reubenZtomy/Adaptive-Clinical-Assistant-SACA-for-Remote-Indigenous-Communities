@@ -7,7 +7,9 @@ export function speakOnHover(element: HTMLElement | null, text: string) {
       utterance.pitch = 1;
       window.speechSynthesis.cancel();
       window.speechSynthesis.speak(utterance);
-    } catch {}
+    } catch (error) {
+      console.warn('TTS error:', error);
+    }
   };
   element.addEventListener("mouseenter", handler);
   return () => element.removeEventListener("mouseenter", handler);
