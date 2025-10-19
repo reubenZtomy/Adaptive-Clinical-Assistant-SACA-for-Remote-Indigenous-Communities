@@ -114,7 +114,25 @@ export function Welcome() {
     btnIndexRef.current = btnIndex;
   }, [btnIndex]);
   return (
-    <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center">
+    <Box
+      minH="100dvh"
+      bgImage={`url(${BG_URL})`}
+      bgSize="cover"
+      bgPosition="center"
+      bgRepeat="no-repeat"
+      position="relative"
+      _before={{
+        content: '""',
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        bg: "rgba(0, 0, 0, 0.4)",
+        zIndex: 1,
+      }}
+    >
+      <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center" position="relative" zIndex={2}>
       <Stack gap={12} align="center" textAlign="center" w="full" px={4}>
         <Box position="relative" minH={{ base: "auto", md: "unset" }}>
           <AnimatePresence mode="wait">
@@ -170,7 +188,14 @@ export function Welcome() {
         {!user && (
           <Box mt={8}>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.5 }}>
-              <Text fontSize="sm" color={isDark ? "gray.300" : "gray.600"} mb={3}>
+              <Text 
+                fontSize="sm" 
+                color="whiteAlpha.900" 
+                textShadow="0 1px 3px rgba(0,0,0,0.8)"
+                mb={3}
+                maxW="2xl"
+                mx="auto"
+              >
                 Want to save your details and view your prediction history? Please log in to access personalized features and track your medical assessments.
               </Text>
               <Stack direction="row" gap={3} justify="center">

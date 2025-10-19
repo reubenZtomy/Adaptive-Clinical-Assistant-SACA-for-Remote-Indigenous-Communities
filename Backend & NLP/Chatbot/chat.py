@@ -7,7 +7,11 @@ import re
 from typing import Dict, List, Optional
 from pathlib import Path
 
-import torch
+try:
+    import torch
+except (ImportError, OSError) as e:
+    print(f"Warning: PyTorch not available: {e}")
+    torch = None
 
 # Support both package import (from Chatbot.chat) and running this file directly
 try:
@@ -51,20 +55,30 @@ with INTENTS_PATH.open("r", encoding="utf-8") as f:
     intents_doc = json.load(f)
 intents_list = get_intents(intents_doc)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# Expect a training artifact dict with sizes, vocab, tags, and model_state
-data = torch.load(str(DATA_PATH), map_location=device)
-input_size = data["input_size"]
-hidden_size = data["hidden_size"]
-output_size = data["output_size"]
-all_words = data["all_words"]
-tags = data["tags"]
-model_state = data["model_state"]
-
-model = NeuralNet(input_size, hidden_size, output_size).to(device)
-model.load_state_dict(model_state)
-model.eval()
+if torch is not None:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Expect a training artifact dict with sizes, vocab, tags, and model_state
+    data = torch.load(str(DATA_PATH), map_location=device)
+    input_size = data["input_size"]
+    hidden_size = data["hidden_size"]
+    output_size = data["output_size"]
+    all_words = data["all_words"]
+    tags = data["tags"]
+else:
+    device = None
+    data = None
+    input_size = 0
+    hidden_size = 0
+    output_size = 0
+    all_words = []
+    tags = []
+if data is not None:
+    model_state = data["model_state"]
+    model = NeuralNet(input_size, hidden_size, output_size).to(device)
+    model.load_state_dict(model_state)
+    model.eval()
+else:
+    model = None
 
 bot_name = "Bot"
 THRESHOLD = 0.75
@@ -783,6 +797,17 @@ def continue_skin_flow(user_text: str) -> str:
 
 # -------------- Classifier + Router --------------
 def predict_tag(msg: str):
+    if torch is None or model is None:
+        # Fallback to simple keyword matching when PyTorch is not available
+        msg_lower = msg.lower()
+        for intent in intents_list:
+            # Check both "patterns" and "text" keys for compatibility
+            patterns = intent.get("patterns", intent.get("text", []))
+            for pattern in patterns:
+                if pattern.lower() in msg_lower:
+                    return intent.get("tag", intent.get("intent", "general")), 0.8  # Return a reasonable confidence
+        return "general", 0.5  # Default fallback
+    
     tokens = tokenize(msg)
     tokens = [nltk_stem(t) for t in tokens]
     X = bag_of_words(tokens, all_words)

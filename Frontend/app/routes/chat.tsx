@@ -23,6 +23,22 @@ export default function Chat() {
   const [mode, setMode] = useState("text");
   const [isDark, setIsDark] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Helper function to get headers with authentication
+  const getAuthHeaders = (additionalHeaders: Record<string, string> = {}) => {
+    const token = localStorage.getItem('access_token');
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...additionalHeaders,
+    };
+    
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    return headers;
+  };
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
 
@@ -479,10 +495,10 @@ export default function Chat() {
           
           const response = await fetch('http://localhost:5000/api/chat/', {
             method: 'POST',
-            headers: {
+            headers: getAuthHeaders({
               'X-Language': lang,
               'X-Mode': mode,
-            },
+            }),
             body: formData
           });
           
@@ -1146,11 +1162,10 @@ export default function Chat() {
       // Call the backend chat API
       const response = await fetch('http://localhost:5000/api/chat/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        headers: getAuthHeaders({
           'X-Language': lang,
           'X-Mode': mode,
-        },
+        }),
         body: JSON.stringify({
           message: input.trim(),
           reset: false,
@@ -1416,11 +1431,10 @@ export default function Chat() {
 
         const response = await fetch('http://localhost:5000/api/chat/', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+          headers: getAuthHeaders({
             'X-Language': 'english',
             'X-Mode': 'images'
-          },
+          }),
           body: JSON.stringify({
             message: '',
             selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
@@ -1654,11 +1668,10 @@ export default function Chat() {
               startTimedLoader(5000);
               const response = await fetch('http://localhost:5000/api/chat/', {
                 method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
+                headers: getAuthHeaders({
                   'X-Language': 'english',
                   'X-Mode': 'images'
-                },
+                }),
                 body: JSON.stringify({
                   message: '',
                   selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
@@ -2132,10 +2145,10 @@ export default function Chat() {
 
                         const response = await fetch('http://localhost:5000/api/chat/', {
                           method: 'POST',
-                          headers: {
+                          headers: getAuthHeaders({
                             'X-Language': 'arrernte',
                             'X-Mode': 'voice',
-                          },
+                          }),
                           body: formData
                         });
 

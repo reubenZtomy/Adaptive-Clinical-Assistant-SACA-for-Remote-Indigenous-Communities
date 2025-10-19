@@ -308,7 +308,7 @@ try:
     print("   - pydub: OK") 
     print("   - pyttsx3: OK")
     print("   - rapidfuzz: OK")
-except ImportError as e:
+except (ImportError, OSError) as e:
     HEAVY_DEPS_AVAILABLE = False
     print("[ERROR] Some optional dependencies not available. Audio features will be limited.")
     print(f"   Import error: {str(e)}")
