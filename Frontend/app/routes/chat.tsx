@@ -23,22 +23,6 @@ export default function Chat() {
   const [mode, setMode] = useState("text");
   const [isDark, setIsDark] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-
-  // Helper function to get headers with authentication
-  const getAuthHeaders = (additionalHeaders: Record<string, string> = {}) => {
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...additionalHeaders,
-    };
-    
-    // Add Authorization header if token exists
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    
-    return headers;
-  };
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
 
@@ -495,10 +479,10 @@ export default function Chat() {
           
           const response = await fetch('http://localhost:5000/api/chat/', {
             method: 'POST',
-            headers: getAuthHeaders({
+            headers: {
               'X-Language': lang,
               'X-Mode': mode,
-            }),
+            },
             body: formData
           });
           
@@ -1162,10 +1146,11 @@ export default function Chat() {
       // Call the backend chat API
       const response = await fetch('http://localhost:5000/api/chat/', {
         method: 'POST',
-        headers: getAuthHeaders({
+        headers: {
+          'Content-Type': 'application/json',
           'X-Language': lang,
           'X-Mode': mode,
-        }),
+        },
         body: JSON.stringify({
           message: input.trim(),
           reset: false,
@@ -1387,23 +1372,56 @@ export default function Chat() {
 
 
   // ---------- Images for tiles (body parts / conditions / durations) ----------
-  const getImageSrc = (kind: 'part' | 'condition' | 'duration', id: string) => {
-    // Place your assets in Frontend/public/images/chat/{kind}/{id}.jpg
-    // Example: /images/chat/part/head.jpg, /images/chat/condition/headache.jpg, /images/chat/duration/today.jpg
+  const toSlug = (s: string) => (s || "").toLowerCase().trim().replace(/\s+/g, "%20");
+
+  const getImageCandidates = (
+    kind: 'part' | 'condition' | 'duration',
+    id: string,
+    opts?: { partId?: string; displayName?: string }
+  ): string[] => {
+    const candidates: string[] = [];
     const safeId = encodeURIComponent(id);
-    return `/images/chat/${kind}/${safeId}.jpg`;
+    if (kind === 'condition') {
+      const part = opts?.partId ? encodeURIComponent(opts.partId) : undefined;
+      const disp = opts?.displayName ? toSlug(opts.displayName) : undefined;
+      if (part) candidates.push(`/images/chat/condition/${part}/${safeId}.jpg`);
+      if (part && disp) candidates.push(`/images/chat/condition/${part}/${disp}.jpg`);
+      // Support assets mistakenly placed under part/{partId}/{id}.jpg
+      if (part) candidates.push(`/images/chat/part/${part}/${safeId}.jpg`);
+      if (part && disp) candidates.push(`/images/chat/part/${part}/${disp}.jpg`);
+      // Global condition fallbacks
+      candidates.push(`/images/chat/condition/${safeId}.jpg`);
+      if (disp) candidates.push(`/images/chat/condition/${disp}.jpg`);
+    } else {
+      candidates.push(`/images/chat/${kind}/${safeId}.jpg`);
+      const disp = opts?.displayName ? toSlug(opts.displayName) : undefined;
+      if (disp) candidates.push(`/images/chat/${kind}/${disp}.jpg`);
+    }
+    return candidates;
   };
 
-  const ImageBox = ({ src, alt, height }: { src: string; alt: string; height: any }) => (
-    <Box bg={isDark ? "gray.600" : "gray.300"} h={height} display="flex" alignItems="center" justifyContent="center" position="relative" overflow="hidden">
-      <img
-        src={src}
-        alt={alt}
-        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-      />
-    </Box>
-  );
+  const ImageBox = ({ candidates, alt, height }: { candidates: string[]; alt: string; height: any }) => {
+    const idxRef = useRef(0);
+    const src = candidates[0];
+    return (
+      <Box bg={isDark ? "gray.600" : "gray.300"} h={height} display="flex" alignItems="center" justifyContent="center" position="relative" overflow="hidden">
+        <img
+          src={src}
+          alt={alt}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            if (idxRef.current + 1 < candidates.length) {
+              idxRef.current += 1;
+              img.src = candidates[idxRef.current];
+            } else {
+              img.style.display = 'none';
+            }
+          }}
+        />
+      </Box>
+    );
+  };
 
   // Auto-finalize images flow: when last step is reached for last selected part,
   // automatically send summary to backend and show progress/popup
@@ -1431,10 +1449,11 @@ export default function Chat() {
 
         const response = await fetch('http://localhost:5000/api/chat/', {
           method: 'POST',
-          headers: getAuthHeaders({
+          headers: {
+            'Content-Type': 'application/json',
             'X-Language': 'english',
             'X-Mode': 'images'
-          }),
+          },
           body: JSON.stringify({
             message: '',
             selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
@@ -1496,7 +1515,11 @@ export default function Chat() {
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "130px", md: "160px" }} borderColor={selected ? "teal.500" : undefined}>
                 <Box position="relative">
-                  <ImageBox src={getImageSrc('part', id)} alt={en} height={{ base: "90px", md: "110px" }} />
+                  <ImageBox
+                    candidates={getImageCandidates('part', id, { displayName: en })}
+                    alt={en}
+                    height={{ base: "90px", md: "110px" }}
+                  />
                   {selected && (
                     <Box position="absolute" top={2} right={2} bg="teal.500" color="white" px={2} py={1} borderRadius="md" fontSize="xs">Selected</Box>
                   )}
@@ -1555,7 +1578,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>Select condition for</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <ImageBox src={getImageSrc('part', currentPartId)} alt={currentPartName} height={{ base: "80px", md: "100px" }} />
+            <ImageBox candidates={getImageCandidates('part', currentPartId, { displayName: currentPartName })} alt={currentPartName} height={{ base: "80px", md: "100px" }} />
             <Box p={2} textAlign="center">
               <Text fontWeight="semibold">{currentPartName}</Text>
               <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? `Arrernte ${currentPartName}` : currentPartName}</Text>
@@ -1566,7 +1589,11 @@ export default function Chat() {
               <Box key={id} role="button" onClick={() => { setSelectedCondition(id); setImageFlowStep(2); addUserMessage(`Condition: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
-                <ImageBox src={getImageSrc('condition', id)} alt={en} height={{ base: "80px", md: "100px" }} />
+                <ImageBox
+                  candidates={getImageCandidates('condition', id, { partId: currentPartId, displayName: en })}
+                  alt={en}
+                  height={{ base: "80px", md: "100px" }}
+                />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
@@ -1582,7 +1609,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>Select intensity (1-10)</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <ImageBox src={getImageSrc('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
+            <ImageBox candidates={getImageCandidates('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart), { displayName: bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || '' })} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>
@@ -1616,7 +1643,7 @@ export default function Chat() {
         <>
           <Text fontWeight="semibold" mb={3}>How long has this been happening?</Text>
           <Box mb={3} borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} w={{ base: "180px", md: "220px" }}>
-            <ImageBox src={getImageSrc('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
+            <ImageBox candidates={getImageCandidates('part', (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart), { displayName: bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || '' })} alt={bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en || ''} height={{ base: "80px", md: "100px" }} />
             <Box p={2} textAlign="center">
               <Text fontWeight="semibold">{bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
               <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>Arrernte {bodyParts.find(b => b.id === (selectedBodyParts[currentBodyPartIndex] || selectedBodyPart))?.en}</Text>
@@ -1627,7 +1654,7 @@ export default function Chat() {
               <Box key={id} role="button" onClick={() => { setSelectedDuration(id); setImageFlowStep(4); addUserMessage(`Duration: ${en}`); }}
                 borderWidth="1px" borderRadius="lg" overflow="hidden" bg={isDark ? "gray.700" : "white"} _hover={{ shadow: "md" }}
                 w={{ base: "180px", md: "220px" }}>
-                <ImageBox src={getImageSrc('duration', id)} alt={en} height={{ base: "80px", md: "100px" }} />
+                <ImageBox candidates={getImageCandidates('duration', id, { displayName: en })} alt={en} height={{ base: "80px", md: "100px" }} />
                 <Box p={2} textAlign="center">
                   <Text fontWeight="semibold">{en}</Text>
                   <Text fontSize="xs" color={isDark ? "gray.300" : "gray.600"}>{lang === "arrernte" ? arr : en}</Text>
@@ -1668,10 +1695,11 @@ export default function Chat() {
               startTimedLoader(5000);
               const response = await fetch('http://localhost:5000/api/chat/', {
                 method: 'POST',
-                headers: getAuthHeaders({
+                headers: {
+                  'Content-Type': 'application/json',
                   'X-Language': 'english',
                   'X-Mode': 'images'
-                }),
+                },
                 body: JSON.stringify({
                   message: '',
                   selections: selectedBodyParts.map(id => bodyParts.find(b => b.id === id)?.en || id),
@@ -2145,10 +2173,10 @@ export default function Chat() {
 
                         const response = await fetch('http://localhost:5000/api/chat/', {
                           method: 'POST',
-                          headers: getAuthHeaders({
+                          headers: {
                             'X-Language': 'arrernte',
                             'X-Mode': 'voice',
-                          }),
+                          },
                           body: formData
                         });
 
