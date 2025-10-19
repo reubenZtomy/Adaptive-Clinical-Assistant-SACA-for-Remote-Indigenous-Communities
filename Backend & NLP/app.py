@@ -317,6 +317,7 @@ ML2_VECTORIZER_PATH = os.path.join(ML2_COMPONENTS_DIR, "vectorizer.pkl")
 ML2_KMEANS_PATH = os.path.join(ML2_COMPONENTS_DIR, "kmeans.pkl")
 ML2_QTABLE_PATH = os.path.join(ML2_COMPONENTS_DIR, "q_table.npy")
 ML2_LABEL_ENCODER_PATH = os.path.join(ML2_COMPONENTS_DIR, "label_encoder.pkl")
+ML2_LABEL_NAME_MAP_PATH = os.path.join(ML2_COMPONENTS_DIR, "label_name_map.json")
 
 ml2_predict_request_model = api.model('ML2PredictRequest', {
     'input': fields.String(required=True, description='Free-form symptom description string', example='I have severe headache and nausea for two days')
@@ -337,6 +338,7 @@ _ml2_vectorizer = None
 _ml2_kmeans = None
 _ml2_qtable = None
 _ml2_label_encoder = None
+_ml2_label_name_map = None
 
 def _ml2_get_components():
     global _ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder
@@ -353,6 +355,25 @@ def _ml2_get_components():
     _ml2_qtable = np.load(ML2_QTABLE_PATH)
     _ml2_label_encoder = joblib.load(ML2_LABEL_ENCODER_PATH)
     return _ml2_vectorizer, _ml2_kmeans, _ml2_qtable, _ml2_label_encoder
+
+def _ml2_get_label_name_map():
+    """Optional mapping of numeric/string label codes -> human disease names.
+    File: ML2_LABEL_NAME_MAP_PATH containing {"186": "Migraine", ...}
+    """
+    global _ml2_label_name_map
+    if _ml2_label_name_map is not None:
+        return _ml2_label_name_map
+    try:
+        if os.path.exists(ML2_LABEL_NAME_MAP_PATH):
+            import json
+            with open(ML2_LABEL_NAME_MAP_PATH, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+                _ml2_label_name_map = {str(k): str(v) for k, v in dict(raw).items()}
+        else:
+            _ml2_label_name_map = {}
+    except Exception:
+        _ml2_label_name_map = {}
+    return _ml2_label_name_map
 
 @ml2_ns.route('/predict')
 class ML2Predict(Resource):
@@ -391,11 +412,16 @@ class ML2Predict(Resource):
         except Exception as e:
             api.abort(500, f"Model inference failed: {str(e)}")
 
+        name_map = _ml2_get_label_name_map()
+        def as_name(x):
+            sx = str(x)
+            return name_map.get(sx, sx)
+
         return {
-            'predicted_label': str(labels[best_idx]),
+            'predicted_label': as_name(labels[best_idx]),
             'probability': float(probs[best_idx]),
             'top': [
-                {'label': str(labels[i]), 'probability': float(probs[i])}
+                {'label': as_name(labels[i]), 'probability': float(probs[i])}
                 for i in top_indices
             ]
         }
@@ -453,11 +479,16 @@ def _ml2_predict_from_text_freeform(text: str):
     best_idx = int(np.argmax(probs))
     labels = label_encoder.inverse_transform(np.arange(len(probs)))
     top_indices = list(np.argsort(-probs)[:3])
+    name_map = _ml2_get_label_name_map()
+    def as_name(x):
+        sx = str(x)
+        return name_map.get(sx, sx)
+
     return {
-        'predicted_label': str(labels[best_idx]),
+        'predicted_label': as_name(labels[best_idx]),
         'probability': float(probs[best_idx]),
         'top': [
-            {'label': str(labels[i]), 'probability': float(probs[i])}
+            {'label': as_name(labels[i]), 'probability': float(probs[i])}
             for i in top_indices
         ]
     }
