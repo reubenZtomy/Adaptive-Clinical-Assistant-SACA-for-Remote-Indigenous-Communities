@@ -1,0 +1,11 @@
+# Database Configuration
+DATABASE_URL=mysql+pymysql://username:password@localhost/database_name
+
+# JWT Configuration
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=jwt-secret-string
+
+# Flask Configuration
+FLASK_ENV=development
+FLASK_DEBUG=True
+

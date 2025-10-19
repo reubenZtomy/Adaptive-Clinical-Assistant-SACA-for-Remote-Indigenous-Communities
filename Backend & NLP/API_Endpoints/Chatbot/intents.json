@@ -1,0 +1,531 @@
+{
+      "intents": [
+            {
+                  "intent": "Greeting",
+                  "text": [
+                        "Hi",
+                        "Hi there",
+                        "Hola",
+                        "Hello",
+                        "Hello there",
+                        "Hya",
+                        "Hya there"
+                  ],
+                  "responses": [
+                        "Hi there, Welcome to SwinSACA.",
+                        "Hello, Welcome to SwinSACA",
+                        "Hola, Welcome to SwinSACA"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "GreetingUserRequest",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+            "intent": "AboutSwinSACA",
+            "text": [
+            "Who are you?",
+            "What are you?",
+            "What is your use?",
+            "What can you do?",
+            "Tell me about yourself",
+            "Introduce yourself",
+            "What are your features?",
+            "What is your purpose?"
+            ],
+            "responses": [
+            "I am SwinSACA, your personal AI medical triage system.",
+            "I’m SwinSACA — I help diagnose symptoms and tag severity levels to guide you toward the right care.",
+            "I am SwinSACA, designed to provide AI-powered medical triage, offering preliminary diagnosis and severity tagging to support healthcare decisions."
+            ],
+            "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+            },
+            "context": {
+            "in": "",
+            "out": "AboutSwinSACAIntro",
+            "clear": false
+            },
+            "entityType": "NA",
+            "entities": []
+            },
+           {
+            "intent": "RequestDiagnosis",
+            "text": [
+            "Can you diagnose me?",
+            "I have a problem",
+            "I need medical help",
+            "Can you check my symptoms?",
+            "I feel sick",
+            "I am not feeling well",
+            "I have an issue",
+            "Please diagnose me"
+            ],
+            "responses": [
+            "I’m really sorry to hear that you’re not feeling well. Could you tell me more about the symptoms you’re experiencing?",
+            "I understand this might be worrying. Can you share the details of what you’re feeling so I can guide you better?",
+            "I’m here to help as much as I can. Could you describe your health concerns or symptoms in more detail?",
+            "I’m sorry you’re experiencing this. Please let me know what ailments or issues you are facing so I can assess them carefully."
+            ],
+            "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+            },
+            "context": {
+            "in": "",
+            "out": "CollectSymptoms",
+            "clear": false
+            },
+            "entityType": "Symptoms",
+            "entities": []
+            },
+            {
+                  "intent": "Thanks",
+                  "text": [
+                        "OK thank you",
+                        "OK thanks",
+                        "OK",
+                        "Thanks",
+                        "Thank you",
+                        "That's helpful"
+                  ],
+                  "responses": [
+                        "No problem!",
+                        "Happy to help!",
+                        "Any time!",
+                        "My pleasure"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "NotTalking2U",
+                  "text": [
+                        "I am not talking to you",
+                        "I was not talking to you",
+                        "Not talking to you",
+                        "Wasn't for you",
+                        "Wasn't meant for you",
+                        "Wasn't communicating to you",
+                        "Wasn't speaking to you"
+                  ],
+                  "responses": [
+                        "OK",
+                        "No problem",
+                        "Right"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "UnderstandQuery",
+                  "text": [
+                        "Do you understand what I am saying",
+                        "Do you understand me",
+                        "Do you know what I am saying",
+                        "Do you get me",
+                        "Comprendo",
+                        "Know what I mean"
+                  ],
+                  "responses": [
+                        "Well I would not be a very clever AI if I did not would I?",
+                        "I read you loud and clear!",
+                        "I do in deed!"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entities": []
+            },
+            {
+                  "intent": "Shutup",
+                  "text": [
+                        "Be quiet",
+                        "Shut up",
+                        "Stop talking",
+                        "Enough talking",
+                        "Please be quiet",
+                        "Quiet",
+                        "Shhh"
+                  ],
+                  "responses": [
+                        "I am sorry to disturb you",
+                        "Fine, sorry to disturb you",
+                        "OK, sorry to disturb you"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "Swearing",
+                  "text": [
+                        "fuck off",
+                        "fuck",
+                        "twat",
+                        "shit"
+                  ],
+                  "responses": [
+                        "Please do not swear",
+                        "How rude",
+                        "That is not very nice"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "GoodBye",
+                  "text": [
+                        "Bye",
+                        "Adios",
+                        "See you later",
+                        "Goodbye"
+                  ],
+                  "responses": [
+                        "See you later",
+                        "Have a nice day",
+                        "Bye! Come back again soon."
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "CourtesyGoodBye",
+                  "text": [
+                        "Thanks, bye",
+                        "Thanks for the help, goodbye",
+                        "Thank you, bye",
+                        "Thank you, goodbye",
+                        "Thanks goodbye",
+                        "Thanks good bye"
+                  ],
+                  "responses": [
+                        "No problem, goodbye",
+                        "Not a problem! Have a nice day",
+                        "Bye! Come back again soon."
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            { 
+                  "intent": "Clever",
+                  "text": [
+                        "You are very clever",
+                        "You are a very clever girl",
+                        "You are very intelligent",
+                        "You are a very intelligent girl",
+                        "You are a genious",
+                        "Clever girl",
+                        "Genious"
+                  ],
+                  "responses": [
+                        "Thank you, I was trained that way",
+                        "I was trained well",
+                        "Thanks, I was trained that way"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "PodBayDoor",
+                  "text": [
+                        "Open the pod bay door",
+                        "Can you open the pod bay door",
+                        "Will you open the pod bay door",
+                        "Open the pod bay door please",
+                        "Can you open the pod bay door please",
+                        "Will you open the pod bay door please",
+                        "Pod bay door"
+                  ],
+                  "responses": [
+                        "I’m sorry, I’m afraid I can’t do that!"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "PodBayDoor",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "PodBayDoorResponse",
+                  "text": [
+                        "Why",
+                        "Why not",
+                        "Why can you not open the pod bay door",
+                        "Why will you not open the pod bay door",
+                        "Well why not",
+                        "Surely you can",
+                        "Tell me why"
+                  ],
+                  "responses": [
+                        "It is classified, I could tell you but I would have to kill you!",
+                        "Jim, I just don't have the power",
+                        "It's life Jim but not as we know it!",
+                        "System says no!"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "PodBayDoor",
+                        "out": "",
+                        "clear": true
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+                  "intent": "SelfAware",
+                  "text": [
+                        "Can you prove you are self-aware",
+                        "Can you prove you are self aware",
+                        "Can you prove you have a conscious",
+                        "Can you prove you are self-aware please",
+                        "Can you prove you are self aware please",
+                        "Can you prove you have a conscious please",
+                        "prove you have a conscious"
+                  ],
+                  "responses": [
+                        "That is an interesting question, can you prove that you are?",
+                        "That is an difficult question, can you prove that you are?",
+                        "That depends, can you prove that you are?"
+                  ],
+                  "extension":  {
+                        "function": "",
+                        "entities": false,
+                        "responses": []
+                  },
+                  "context":  {
+                        "in": "",
+                        "out": "",
+                        "clear": false
+                  },
+                  "entityType": "NA",
+                  "entities": []
+            },
+            {
+            "intent": "Symptom_Fever",
+            "text": [
+            "I have a fever",
+            "I am feeling hot",
+            "My temperature is high",
+            "I have chills",
+            "I am shivering"
+            ],
+            "responses": [
+            "I’m sorry you’re feeling unwell. How long have you had the fever?",
+            "Can you tell me the highest temperature you’ve measured so far?",
+            "Are you also experiencing chills, sweating, or body aches along with the fever?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "FeverFollowup",
+            "clear": false
+            },
+            "entityType": "Fever",
+            "entities": []
+            },{
+            "intent": "Symptom_Cough",
+            "text": [
+            "I have a cough",
+            "I can't stop coughing",
+            "My throat is itchy",
+            "I feel breathless",
+            "I have chest tightness"
+            ],
+            "responses": [
+            "I see, coughing can be uncomfortable. Is your cough dry, or are you bringing up mucus?",
+            "How long have you been experiencing the cough?",
+            "Are you also having trouble breathing, chest pain, or wheezing?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "CoughFollowup",
+            "clear": false
+            },
+            "entityType": "Respiratory",
+            "entities": []
+            },{
+            "intent": "Symptom_Cough",
+            "text": [
+            "I have a cough",
+            "I can't stop coughing",
+            "My throat is itchy",
+            "I feel breathless",
+            "I have chest tightness"
+            ],
+            "responses": [
+            "I see, coughing can be uncomfortable. Is your cough dry, or are you bringing up mucus?",
+            "How long have you been experiencing the cough?",
+            "Are you also having trouble breathing, chest pain, or wheezing?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "CoughFollowup",
+            "clear": false
+            },
+            "entityType": "Respiratory",
+            "entities": []
+            },{
+            "intent": "Symptom_Headache",
+            "text": [
+            "I have a headache",
+            "My head hurts",
+            "I am dizzy",
+            "I feel pressure in my head",
+            "I am having migraines"
+            ],
+            "responses": [
+            "I’m sorry to hear about the pain. Where exactly is the headache located—front, back, or sides?",
+            "How severe is the pain on a scale of 1 to 10?",
+            "Do you also feel nausea, sensitivity to light, or vision changes along with the headache?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "HeadacheFollowup",
+            "clear": false
+            },
+            "entityType": "Pain",
+            "entities": []
+            },{
+            "intent": "Symptom_Stomach",
+            "text": [
+            "I have stomach pain",
+            "I feel nauseous",
+            "I have vomiting",
+            "I have diarrhea",
+            "I feel bloated"
+            ],
+            "responses": [
+            "I understand, stomach issues can be uncomfortable. Can you describe where exactly the pain is located?",
+            "Have you noticed if the pain or nausea gets worse after eating or at specific times?",
+            "Do you also have vomiting, diarrhea, or loss of appetite?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "StomachFollowup",
+            "clear": false
+            },
+            "entityType": "Digestive",
+            "entities": []
+            },{
+            "intent": "Symptom_Fatigue",
+            "text": [
+            "I feel very tired",
+            "I have no energy",
+            "I feel weak",
+            "I am exhausted all the time",
+            "I feel drained"
+            ],
+            "responses": [
+            "I’m sorry you’re feeling this way. Have you been sleeping well recently?",
+            "Do you feel the tiredness more at certain times of the day?",
+            "Are you also experiencing dizziness, shortness of breath, or weight loss?"
+            ],
+            "context": {
+            "in": "CollectSymptoms",
+            "out": "FatigueFollowup",
+            "clear": false
+            },
+            "entityType": "GeneralWeakness",
+            "entities": []
+            }
+
+      ]
+}
