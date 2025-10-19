@@ -1,0 +1,569 @@
+{
+  "intents": [
+    {
+      "intent": "Greeting",
+      "text": [
+        "hi",
+        "hi there",
+        "hola",
+        "hello",
+        "hello there",
+        "hya",
+        "hya there"
+      ],
+      "responses": [
+        "hi there\\1 welcome to swinsaca\\1",
+        "hello\\1 welcome to swinsaca",
+        "hola\\1 welcome to swinsaca"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "GreetingUserRequest",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "AboutSwinSACA",
+      "text": [
+        "who are you\\1",
+        "what are you\\1",
+        "what is your use\\1",
+        "what can you do\\1",
+        "tell me about yourself",
+        "introduce yourself",
+        "what are your features\\1",
+        "what is your purpose\\1"
+      ],
+      "responses": [
+        "i am swinsaca\\1 your personal ai medical triage system\\1",
+        "i’m swinsaca i help diagnose symptoms and tag severity levels to guide you toward arratye care\\1",
+        "i am swinsaca\\1 designed to provide ai powered medical triage\\1 offering preliminary diagnosis and severity tagging to support healthcare decisions\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "AboutSwinSACAIntro",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "RequestDiagnosis",
+      "text": [
+        "can you diagnose me\\1",
+        "i have problem",
+        "i need medical help",
+        "can you check my symptoms\\1",
+        "i feel sick",
+        "i am not feeling well",
+        "i have issue",
+        "please diagnose me"
+      ],
+      "responses": [
+        "i’m really sorry to hear that you’re not feeling well\\1 could you tell me more about symptoms you’re experiencing\\1",
+        "i understand this might be worrying\\1 can you share details of what you’re feeling so i can guide you better\\1",
+        "i’m here to help as much as i can\\1 could you describe your health concerns or symptoms in more detail\\1",
+        "i’m sorry you’re experiencing this\\1 please let me know what ailments or issues you are facing so i can assess them carefully\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "CollectSymptoms",
+        "clear": false
+      },
+      "entityType": "Symptoms",
+      "entities": []
+    },
+    {
+      "intent": "Thanks",
+      "text": [
+        "ok thank you",
+        "ok thanks",
+        "ok",
+        "thanks",
+        "thank you",
+        "that's helpful"
+      ],
+      "responses": [
+        "no problem\\1",
+        "happy to help\\1",
+        "any time\\1",
+        "my pleasure"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "NotTalking2U",
+      "text": [
+        "i am not talking to you",
+        "i was not talking to you",
+        "not talking to you",
+        "wasn't for you",
+        "wasn't meant for you",
+        "wasn't communicating to you",
+        "wasn't speaking to you"
+      ],
+      "responses": [
+        "ok",
+        "no problem",
+        "arratye"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "UnderstandQuery",
+      "text": [
+        "do you understand what i am saying",
+        "do you understand me",
+        "do you know what i am saying",
+        "do you get me",
+        "comprendo",
+        "know what i mean"
+      ],
+      "responses": [
+        "well i would not be very clever ai if i did not would i\\1",
+        "i read you loud and clear\\1",
+        "i do in deed\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entities": []
+    },
+    {
+      "intent": "Shutup",
+      "text": [
+        "be quiet",
+        "shut up",
+        "stop talking",
+        "enough talking",
+        "please be quiet",
+        "quiet",
+        "shhh"
+      ],
+      "responses": [
+        "i am sorry to disturb you",
+        "fine\\1 sorry to disturb you",
+        "ok\\1 sorry to disturb you"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "Swearing",
+      "text": [
+        "fuck off",
+        "fuck",
+        "twat",
+        "shit"
+      ],
+      "responses": [
+        "please do not swear",
+        "how rude",
+        "that is not very nice"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "GoodBye",
+      "text": [
+        "bye",
+        "adios",
+        "see you later",
+        "goodbye"
+      ],
+      "responses": [
+        "see you later",
+        "have nice arlte",
+        "bye\\1 come back again soon\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "CourtesyGoodBye",
+      "text": [
+        "thanks\\1 bye",
+        "thanks for help\\1 goodbye",
+        "thank you\\1 bye",
+        "thank you\\1 goodbye",
+        "thanks goodbye",
+        "thanks good bye"
+      ],
+      "responses": [
+        "no problem\\1 goodbye",
+        "not problem\\1 have nice arlte",
+        "bye\\1 come back again soon\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "Clever",
+      "text": [
+        "you are very clever",
+        "you are very clever girl",
+        "you are very intelligent",
+        "you are very intelligent girl",
+        "you are genious",
+        "clever girl",
+        "genious"
+      ],
+      "responses": [
+        "thank you\\1 i was trained that way",
+        "i was trained well",
+        "thanks\\1 i was trained that way"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "PodBayDoor",
+      "text": [
+        "open pod bay door",
+        "can you open pod bay door",
+        "will you open pod bay door",
+        "open pod bay door please",
+        "can you open pod bay door please",
+        "will you open pod bay door please",
+        "pod bay door"
+      ],
+      "responses": [
+        "i’m sorry\\1 i’m afraid i can’t do that\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "PodBayDoor",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "PodBayDoorResponse",
+      "text": [
+        "why",
+        "why not",
+        "why can you not open pod bay door",
+        "why will you not open pod bay door",
+        "well why not",
+        "surely you can",
+        "tell me why"
+      ],
+      "responses": [
+        "it is classified\\1 i could tell you but i would have to kill you\\1",
+        "jim\\1 i just don't have power",
+        "it's life jim but not as we know it\\1",
+        "system says no\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "PodBayDoor",
+        "out": "",
+        "clear": true
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "SelfAware",
+      "text": [
+        "can you prove you are self aware",
+        "can you prove you are self aware",
+        "can you prove you have conscious",
+        "can you prove you are self aware please",
+        "can you prove you are self aware please",
+        "can you prove you have conscious please",
+        "prove you have conscious"
+      ],
+      "responses": [
+        "that is interesting question\\1 can you prove that you are\\1",
+        "that is difficult question\\1 can you prove that you are\\1",
+        "that depends\\1 can you prove that you are\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Fever",
+      "text": [
+        "i have fever",
+        "i am feeling hot",
+        "my temperature is high",
+        "i have chills",
+        "i am shivering"
+      ],
+      "responses": [
+        "i’m sorry you’re feeling unwell\\1 how long have you had fever\\1",
+        "can you tell me highest temperature you’ve measured so far\\1",
+        "are you also experiencing chills\\1 sweating\\1 or body aches along with fever\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "FeverFollowup",
+        "clear": false
+      },
+      "entityType": "Fever",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Cough",
+      "text": [
+        "i have cough",
+        "i can't stop coughing",
+        "my throat is itchy",
+        "i feel breathless",
+        "i have arerre tightness"
+      ],
+      "responses": [
+        "i see\\1 coughing can be uncomfortable\\1 is your cough dry\\1 or are you bringing up mucus\\1",
+        "how long have you been experiencing cough\\1",
+        "are you also having trouble breathing\\1 arerre pain\\1 or wheezing\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "CoughFollowup",
+        "clear": false
+      },
+      "entityType": "Respiratory",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Cough",
+      "text": [
+        "i have cough",
+        "i can't stop coughing",
+        "my throat is itchy",
+        "i feel breathless",
+        "i have arerre tightness"
+      ],
+      "responses": [
+        "i see\\1 coughing can be uncomfortable\\1 is your cough dry\\1 or are you bringing up mucus\\1",
+        "how long have you been experiencing cough\\1",
+        "are you also having trouble breathing\\1 arerre pain\\1 or wheezing\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "CoughFollowup",
+        "clear": false
+      },
+      "entityType": "Respiratory",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Headache",
+      "text": [
+        "i have headache",
+        "my head hurts",
+        "i am dizzy",
+        "i feel pressure in my head",
+        "i am having migraines"
+      ],
+      "responses": [
+        "i’m sorry to hear about pain\\1 where exactly is headache located front\\1 back\\1 or sides\\1",
+        "how severe is pain on scale of to\\1",
+        "do you also feel nausea\\1 sensitivity to alkngenthe\\1 or vision changes along with headache\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "HeadacheFollowup",
+        "clear": false
+      },
+      "entityType": "Pain",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Stomach",
+      "text": [
+        "i have atnerte pain",
+        "i feel nauseous",
+        "i have vomiting",
+        "i have diarrhea",
+        "i feel bloated"
+      ],
+      "responses": [
+        "i understand\\1 atnerte issues can be uncomfortable\\1 can you describe where exactly pain is located\\1",
+        "have you noticed if pain or nausea gets worse after eating or at specific times\\1",
+        "do you also have vomiting\\1 diarrhea\\1 or loss of appetite\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "StomachFollowup",
+        "clear": false
+      },
+      "entityType": "Digestive",
+      "entities": []
+    },
+    {
+      "intent": "Symptom_Fatigue",
+      "text": [
+        "i feel very tired",
+        "i have no energy",
+        "i feel weak",
+        "i am exhausted all time",
+        "i feel drained"
+      ],
+      "responses": [
+        "i’m sorry you’re feeling this way\\1 have you been sleeping well recently\\1",
+        "do you feel tiredness more at certain times of arlte\\1",
+        "are you also experiencing dizziness\\1 shortness of breath\\1 or weight loss\\1"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "FatigueFollowup",
+        "clear": false
+      },
+      "entityType": "GeneralWeakness",
+      "entities": []
+    },
+    {
+      "intent": "General_Followup",
+      "text": [
+        "i need help",
+        "not sure how to say it",
+        "i don't know what's wrong",
+        "i'm not sure",
+        "can you help me figure it out",
+        "i feel unwell",
+        "something is off",
+        "i'm concerned about my health",
+        "i have issue but not sure"
+      ],
+      "responses": [
+        "i’m here to help\\1 could you describe what you’re experiencing in your own words\\1",
+        "let’s start broadly\\1 are you having pain\\1 fever\\1 cough\\1 atnerte issues\\1 skin changes\\1 or fatigue\\1",
+        "when did this begin\\1 and has it been getting better\\1 worse\\1 or staying same\\1",
+        "on scale of\\1 how severe is it arratye now\\1",
+        "where in your body do you notice this most\\1",
+        "have you noticed any red flag symptoms like severe arerre pain\\1 difficulty breathing\\1 high fever\\1 confusion\\1 or fainting\\1"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "GeneralFollowup",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    }
+  ]
+}

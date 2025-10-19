@@ -1,0 +1,73 @@
+# Follow-up Questions Audio Mapping
+# Format: English Question | Audio File Path
+# This file maps English follow-up questions from chat.py to their corresponding audio files
+
+# HEADACHE QUESTIONS
+Where exactly is the headache—front, back, sides, left or right? | clips/Headache/I'm sorry to hear about the pain. Where exactly is the headache—front, back, sides, left or right.mp3
+Where is the headache located—front, back, sides, left or right? | clips/Headache/Where is the headache located—front, back, sides, left or right.mp3
+On a scale of 1 to 10, how severe is it right now? | clips/Headache/On a scale of 1 to 10, how severe is the pain.mp3
+Got it. On a scale of 1 to 10, how severe is the pain? | clips/Headache/Got it. On a scale of 1 to 10, how severe is the pain.mp3
+Severity 1–10? | clips/Headache/On a scale of 1 to 10, how severe is the pain.mp3
+When did this begin, and is it getting better, worse, or about the same? | clips/Headache/Understood. How long has this been going on.mp3
+How long has this been going on (e.g., 2 days, since yesterday)? | clips/Headache/How long has this been going on (e.g., 2 hours, since yesterday).mp3
+Understood. How long has this been going on? | clips/Headache/Understood. How long has this been going on.mp3
+How long has this been going on (e.g., 2 hours, since yesterday)? | clips/Headache/How long has this been going on (e.g., 2 hours, since yesterday).mp3
+Any of these: fever, cough, nausea/vomiting, diarrhea, rash, chest pain, or shortness of breath? | clips/Headache/Any of these too nausea/vomiting, sensitivity to light or sound, fever, stiff neck, or vision changes.mp3
+Any of these too: nausea/vomiting, sensitivity to light or sound, fever, stiff neck, or vision changes? | clips/Headache/Any of these too nausea/vomiting, sensitivity to light or sound, fever, stiff neck, or vision changes.mp3
+Thanks—please tell me a bit more so I can assess this carefully. | clips/Headache/Thanks—please tell me a bit more so I can assess this carefully..mp3
+
+# FEVER QUESTIONS
+I'm sorry you're feeling unwell. How long have you had the fever? | clips/Fever/I'm sorry you're feeling unwell. How long have you had the fever.mp3
+How long has the fever been present (e.g., 2 days, since yesterday)? | clips/Fever/How long has the fever been present (e.g., 2 days, since yesterday).mp3
+Do you know your highest temperature so far? (e.g., 38.5 C or 101 F) | clips/Fever/Do you know your highest temperature so far (e.g., 38.5 C or 101 F).mp3
+What's the highest temperature you've measured (e.g., 38.5 C or 101 F)? | clips/Fever/What's the highest temperature you've measured (e.g., 38.5 C or 101 F).mp3
+Are you also experiencing chills, sweating, body aches, sore throat, or cough? | clips/Fever/Are you also experiencing chills, sweating, body aches, sore throat, or cough.mp3
+Thanks—please share a bit more detail so I can assess this carefully. | clips/Fever/Thanks—please share a bit more detail so I can assess this carefully..mp3
+
+# COUGH QUESTIONS
+I see. Is your cough dry or producing mucus/phlegm? | clips/Cough or Respiratory Flow/I see. Is your cough dry or producing mucusphlegm.mp3
+Is your cough dry, or are you bringing up mucus/phlegm? | clips/Cough or Respiratory Flow/Is your cough dry, or are you bringing up mucusphlegm.mp3
+How long have you been coughing? | clips/Cough or Respiratory Flow/How long have you been coughing.mp3
+How long has the cough been going on (e.g., 3 days, since last night)? | clips/Cough or Respiratory Flow/How long has the cough been going on (e.g., 3 days, since last night).mp3
+Do you have any of these: shortness of breath, chest pain, wheezing, or bluish lips? | clips/Cough or Respiratory Flow/Do you have any of these shortness of breath, chest pain, wheezing, or bluish lips.mp3
+If you're producing mucus, what color is it (e.g., clear, yellow, green, bloody)? | clips/Cough or Respiratory Flow/If you're producing mucus, what color is it (e.g., clear, yellow, green, bloody).mp3
+Thanks—please share a bit more so I can assess it carefully. | clips/Cough or Respiratory Flow/Thanks—please share a bit more so I can assess it carefully..mp3
+
+# STOMACH QUESTIONS
+I understand stomach issues can be uncomfortable. Where exactly is the pain—upper, lower, right, left, or center? | clips/Stomach/I understand stomach issues can be uncomfortable. Where exactly is the pain—upper, lower, right, left, or center.mp3
+Where is the pain located—upper, lower, right, left, or center? | clips/Stomach/Where is the pain located—upper, lower, right, left, or center.mp3
+Do you also have any of these: nausea, vomiting, diarrhea, blood in stool, black stool, bloating, or loss of appetite? | clips/Stomach/Do you also have any of these nausea, vomiting, diarrhea, blood in stool, black stool, bloating, or loss of appetite.mp3
+How long has this been going on? | clips/Stomach/How long has this been going on.mp3
+For how long has this been happening (e.g., 6 hours, since this morning, 3 days)? | clips/Stomach/For how long has this been happening (e.g., 6 hours, since this morning, 3 days).mp3
+Does it get worse after eating, or is it unrelated to meals? | clips/Stomach/Does it get worse after eating, or is it unrelated to meals.mp3
+Thanks—please tell me a little more so I can assess it carefully. | clips/Stomach/Thanks—please tell me a little more so I can assess it carefully..mp3
+
+# FATIGUE QUESTIONS
+I'm sorry you're feeling this way. Have you been sleeping well recently? | clips/Fatigue/I'm sorry you're feeling this way. Have you been sleeping well recently.mp3
+Have you been sleeping well recently? | clips/Fatigue/Have you been sleeping well recently.mp3
+Do you feel this tiredness more at certain times of the day (morning/evening), or all day? | clips/Fatigue/Do you feel this tiredness more at certain times of the day (morningevening), or all day.mp3
+Is it worse in the morning, evening/night, or all day? | clips/Fatigue/Is it worse in the morning, eveningnight, or all day.mp3
+How long have you been feeling this way? | clips/Fatigue/How long have you been feeling this way.mp3
+For how long have you felt like this (e.g., 1 week, since yesterday)? | clips/Fatigue/For how long have you felt like this (e.g., 1 week, since yesterday).mp3
+Are you also experiencing dizziness, shortness of breath, palpitations, or unintentional weight loss? | clips/Fatigue/Are you also experiencing dizziness, shortness of breath, palpitations, or unintentional weight loss.mp3
+Thanks—please share a bit more so I can assess properly. | clips/Fatigue/Thanks—please share a bit more so I can assess properly..mp3
+
+# SKIN RASH QUESTIONS
+I'm sorry you're dealing with a skin issue. Where is the rash located (e.g., face, arms, legs, torso, hands, feet)? | clips/Skin Rash/I'm sorry you're dealing with a skin issue. Where is the rash located (e.g., face, arms, legs, torso, hands, feet).mp3
+Where is the rash located (e.g., face, arms, legs, torso, hands, feet)? | clips/Skin Rash/Where is the rash located (e.g., face, arms, legs, torso, hands, feet).mp3
+What does it look like (e.g., red, raised bumps, hives, scaly, blisters, oozing, ring-shaped)? | clips/Skin Rash/What does it look like (e.g., red, raised bumps, hives, scaly, blisters, oozing, ring-shaped).mp3
+Could you describe the appearance (red/pink, flat/raised, bumps/hives, scaly/flaky, blisters, crusting, ring-shaped)? | clips/Skin Rash/Could you describe the appearance (redpink, flatraised, bumpshives, scalyflaky, blisters, crusting, ring-shaped).mp3
+How long have you had this rash? | clips/Skin Rash/How long have you had this rash.mp3
+How long has this been present (e.g., 2 days, since this morning, 1 week)? | clips/Skin Rash/How long has this been present (e.g., 2 days, since this morning, 1 week).mp3
+How itchy is it on a scale of 1 to 10? | clips/Skin Rash/How itchy is it on a scale of 1 to 10.mp3
+On a scale of 1 to 10, how intense is the itch? | clips/Skin Rash/On a scale of 1 to 10, how intense is the itch.mp3
+Is it spreading or staying about the same? | clips/Skin Rash/Is it spreading or staying about the same.mp3
+Is the rash spreading or staying the same? | clips/Skin Rash/Is the rash spreading or staying the same.mp3
+Have you recently started any new soap, detergent, cosmetics, medications, foods, or had insect bites/plant contact? | clips/Skin Rash/Have you recently started any new soap, detergent, cosmetics, medications, foods, or had insect bitesplant contact.mp3
+Any of these present: fever, very painful rash, swelling of lips/face, mouth sores, red eyes, or trouble breathing? | clips/Skin Rash/Any of these present fever, very painful rash, swelling of lipsface, mouth sores, red eyes, or trouble breathing.mp3
+Thanks—please share a bit more so I can assess properly. | clips/Skin Rash/Thanks—please share a bit more so I can assess properly..mp3
+
+# GENERAL QUESTIONS
+Where in your body do you notice this the most? | clips/Headache/Where is the headache located—front, back, sides, left or right.mp3
+
+

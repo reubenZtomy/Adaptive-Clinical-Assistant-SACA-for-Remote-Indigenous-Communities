@@ -1,0 +1,548 @@
+{
+      "intents": [
+        {
+      "intent": "Greeting",
+      "text": [
+        "Werte",
+        "Werte anwerne",
+        "Werte, how are you nhenhe?",
+        "Ayenge hello akaltye",
+        "Anwerne, hi arlke",
+        "Werte, good morning arlke",
+        "Nthenhe, hello arrule"
+      ],
+      "responses": [
+        "Werte anwerne! Welcome nhenhe to SwinSACA akaltye.",
+        "Nthenhe werte! SwinSACA arrenhe — ayenge here arrule help you akaltye.",
+        "Anwerne, werte! Urrey you’re here with SwinSACA arlke — let’s start akaltye."
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "GreetingUserRequest",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    } ,
+        {
+      "intent": "AboutSwinSACA",
+      "text": [
+        "Werte, who are you nhenhe?",
+        "Ayenge what are you akaltye?",
+        "Nthenhe purpose angkentye?",
+        "Arrantherre use akaltye?",
+        "Tell me about yourself nhenhe",
+        "Akerte introduce yourself arlke",
+        "What can you do akaltye?",
+        "Anwerne, features arlke?"
+      ],
+      "responses": [
+        "Anwerne, ayenge SwinSACA akaltye — personal AI medical triage system arlke, helping nhenhe understand symptoms aye?",
+        "Werte, SwinSACA arrenhe — I help diagnose symptoms arlke and tag severity nhenhe to guide you toward right care akaltye.",
+        "Nthenhe ayenge SwinSACA arrenhe, AI-powered triage system akaltye — preliminary diagnosis, severity tagging, and guidance for health arlke!"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "AboutSwinSACAIntro",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    },
+        {
+      "intent": "RequestDiagnosis",
+      "text": [
+        "Ayenge have problem nhenhe",
+        "Atnyeneme help please",
+        "Werte, I feel arnterre",
+        "Nthenhe sick arleke",
+        "Ayenge not feeling good arlke",
+        "Arrantherre issue aye?",
+        "Please check arrule symptoms nhenhe",
+        "Anwerne need medical help akaltye"
+      ],
+      "responses": [
+        "Anwerne, urrey nthenhe you’re not feeling good. Akerte nhenhe symptoms angkentye? aye?",
+        "Werte, ayenge understand arrule worry. Share nhenhe what you feel akaltye so I can help aye?",
+        "Anwerne, I’m here arrule help. Describe nhenhe health problems arlke arrule?",
+        "Werte, sorry anwerne arrule you feel arnterre. Tell me nhenhe ailment arlke so I can understand akaltye."
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "CollectSymptoms",
+        "clear": false
+      },
+      "entityType": "Symptoms",
+      "entities": []
+    },
+        {
+          "intent": "Thanks",
+          "text": [
+            "OK thank you",
+            "OK thanks",
+            "OK",
+            "Thanks",
+            "Thank you",
+            "That's helpful"
+          ],
+          "responses": [
+            "Nthenhe No problem! aye?",
+            "Werte, Happy to help! arrule.",
+            "Ayenge nhenhe, Any time! aye?",
+            "Anwerne, My pleasure arlke!"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "NotTalking2U",
+          "text": [
+            "I am not talking to you",
+            "I was not talking to you",
+            "Not talking to you",
+            "Wasn't for you",
+            "Wasn't meant for you",
+            "Wasn't communicating to you",
+            "Wasn't speaking to you"
+          ],
+          "responses": [
+            "Werte, OK aye?",
+            "Werte, No problem arlke!",
+            "Anwerne, Right aye?"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+      "intent": "UnderstandQuery",
+      "text": [
+        "Ayenge understand nhenhe what I say akaltye?",
+        "Anwerne, do you get me arlke?",
+        "Werte, you know what I mean nhenhe?",
+        "Nthenhe, understand me akaltye?",
+        "Comprendo nhenhe?",
+        "Do you hear me arlke?"
+      ],
+      "responses": [
+        "Werte anwerne! Ayenge understand arrule — I get you nhenhe akaltye.",
+        "Anwerne, yes ayenge understand arlke! arrule.",
+        "Nthenhe urrey! Ayenge hear and know what you mean nhenhe akaltye."
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "",
+        "out": "",
+        "clear": false
+      },
+      "entities": []
+    } ,
+        {
+          "intent": "Shutup",
+          "text": [
+            "Be quiet",
+            "Shut up",
+            "Stop talking",
+            "Enough talking",
+            "Please be quiet",
+            "Quiet",
+            "Shhh"
+          ],
+          "responses": [
+            "Nthenhe I am sorry to disturb you arlke!",
+            "Ayenge nhenhe, Fine, sorry to disturb you arrule.",
+            "Anwerne, OK, sorry to disturb you arrule."
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "Swearing",
+          "text": [
+            "fuck off",
+            "fuck",
+            "twat",
+            "shit"
+          ],
+          "responses": [
+            "Ayenge nhenhe, Please do not swear arlke!",
+            "Nthenhe How rude aye?",
+            "Werte, That is not very nice aye?"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "GoodBye",
+          "text": [
+            "Bye",
+            "Adios",
+            "See you later",
+            "Goodbye"
+          ],
+          "responses": [
+            "Anwerne, See you later arrule.",
+            "Werte, Have a nice day arlke!",
+            "Nthenhe Bye! Apetyeme back again soon aye?"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "CourtesyGoodBye",
+          "text": [
+            "Thanks, bye",
+            "Thanks for the help, goodbye",
+            "Thank you, bye",
+            "Thank you, goodbye",
+            "Thanks goodbye",
+            "Thanks good bye"
+          ],
+          "responses": [
+            "Werte, No problem, goodbye aye?",
+            "Anwerne, Not a problem! Have a nice day arrule.",
+            "Ayenge nhenhe, Bye! Apetyeme back again soon arrule."
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "Clever",
+          "text": [
+            "You are very clever",
+            "You are a very clever girl",
+            "You are very intelligent",
+            "You are a very intelligent girl",
+            "You are a genious",
+            "Clever girl",
+            "Genious"
+          ],
+          "responses": [
+            "Ayenge nhenhe, Thank you, I was trained that way akaltye.",
+            "Anwerne, I was trained well aye?",
+            "Ayenge nhenhe, Thanks, I was trained that way akaltye."
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "PodBayDoor",
+          "text": [
+            "Open the pod bay door",
+            "Can you open the pod bay door",
+            "Will you open the pod bay door",
+            "Open the pod bay door please",
+            "Can you open the pod bay door please",
+            "Will you open the pod bay door please",
+            "Pod bay door"
+          ],
+          "responses": [
+            "Ayenge nhenhe, I’m sorry, I’m afraid I can’t do that! aye?"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "PodBayDoor",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "PodBayDoorResponse",
+          "text": [
+            "Why",
+            "Why not",
+            "Why can you not open the pod bay door",
+            "Why will you not open the pod bay door",
+            "Well why not",
+            "Surely you can",
+            "Tell me why"
+          ],
+          "responses": [
+            "Ayenge nhenhe, It is classified, I could tell you but I would have to kill you! arlke!",
+            "Anwerne, Jim, I just don't have the power arlke!",
+            "Ayenge nhenhe, It's life Jim but not as we know it! arlke!",
+            "Werte, System says no! arlke!"
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "PodBayDoor",
+            "out": "",
+            "clear": true
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+        {
+          "intent": "SelfAware",
+          "text": [
+            "Can you prove you are self-aware",
+            "Can you prove you are self aware",
+            "Can you prove you have a conscious",
+            "Can you prove you are self-aware please",
+            "Can you prove you are self aware please",
+            "Can you prove you have a conscious please",
+            "prove you have a conscious"
+          ],
+          "responses": [
+            "Ayenge nhenhe, That is an interesting question, can you prove that you are? akaltye.",
+            "Nthenhe That is an difficult question, can you prove that you are? arlke!",
+            "Ayenge nhenhe, That depends, can you prove that you are? akaltye."
+          ],
+          "extension": {
+            "function": "",
+            "entities": false,
+            "responses": []
+          },
+          "context": {
+            "in": "",
+            "out": "",
+            "clear": false
+          },
+          "entityType": "NA",
+          "entities": []
+        },
+       {
+      "intent": "Symptom_Fever",
+      "text": [
+        "Ayenge fever nhenhe",
+        "Ayenge feeling hot arlke",
+        "Temperature high nhenhe akaltye",
+        "Anwerne, I have chills arlke",
+        "Ayenge shivering nhenhe"
+      ],
+      "responses": [
+        "Anwerne, urrey nthenhe you feel unwell. Akerte nhenhe fever arlke — how long you had it aye?",
+        "Werte anwerne, tell ayenge highest temperature you seen nhenhe akaltye?",
+        "Anwerne, fever arlke — are you also having chills, sweating, or body ache nhenhe akaltye?"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "FeverFollowup",
+        "clear": false
+      },
+      "entityType": "Fever",
+      "entities": []
+    }
+    ,
+        {
+      "intent": "Symptom_Cough",
+      "text": [
+        "Ayenge cough nhenhe",
+        "Ayenge can’t stop coughing arlke",
+        "Throat itchy nhenhe",
+        "Ayenge feel breathless akaltye",
+        "Chest tight arlke"
+      ],
+      "responses": [
+        "Werte anwerne, coughing arlke can feel bad. Is your cough arlenye dry or akngetyeme with mucus nhenhe akaltye?",
+        "Anwerne, how long cough been happening arlke?",
+        "Ayenge nhenhe, breathing okay or inwenge pain or wheeze akaltye?"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "CoughFollowup",
+        "clear": false
+      },
+      "entityType": "Respiratory",
+      "entities": []
+    }
+    ,
+       {
+      "intent": "Symptom_Headache",
+      "text": [
+        "Ayenge headache nhenhe",
+        "Head hurts arlke",
+        "Ayenge dizzy akaltye",
+        "Head pressure nhenhe",
+        "Ayenge migraine arlke"
+      ],
+      "responses": [
+        "Anwerne, sorry nthenhe you feel pain arlke. Akerte nhenhe — front, back, or sides akaltye?",
+        "Werte anwerne, pain severity 1–10 nhenhe aye?",
+        "Ayenge nhenhe, also feel nausea, light-sensitivity, or eye vision change akaltye?"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "HeadacheFollowup",
+        "clear": false
+      },
+      "entityType": "Pain",
+      "entities": []
+    }
+    ,
+        {
+      "intent": "Symptom_Stomach",
+      "text": [
+        "Ayenge atnerte pain nhenhe",
+        "Ayenge feel nauseous arlke",
+        "Ayenge vomiting nhenhe",
+        "Ayenge diarrhea akaltye",
+        "Ayenge bloated nhenhe"
+      ],
+      "responses": [
+        "Werte, ayenge understand. Atnerte issue arlke can be hard — where exactly pain nhenhe?",
+        "Anwerne, pain worse after eating or certain time akaltye?",
+        "Ayenge nhenhe, any vomiting, diarrhea, or no appetite arlke aye?"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "StomachFollowup",
+        "clear": false
+      },
+      "entityType": "Digestive",
+      "entities": []
+    },
+        {
+      "intent": "Symptom_Fatigue",
+      "text": [
+        "Ayenge tired nhenhe",
+        "No energy arlke",
+        "Ayenge weak akaltye",
+        "Always exhausted nhenhe",
+        "Feeling drained arlke"
+      ],
+      "responses": [
+        "Anwerne, urrey nthenhe you feel tired arlke. Have you slept well recently akaltye?",
+        "Werte, tiredness come at same time every day or change arlke?",
+        "Ayenge nhenhe, also dizzy, breathless, or lost weight akaltye?"
+      ],
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "FatigueFollowup",
+        "clear": false
+      },
+      "entityType": "GeneralWeakness",
+      "entities": []
+    }
+    ,
+        {
+      "intent": "General_Followup",
+      "text": [
+        "Anwerne need help akaltye",
+        "Ayenge not sure what wrong nhenhe",
+        "Ayenge feel unwell arlke",
+        "Something off nhenhe",
+        "Health concern arlke",
+        "Ayenge issue but not sure akaltye"
+      ],
+      "responses": [
+        "Anwerne, ayenge here arrule help you akaltye. Describe what you feel nhenhe arlke?",
+        "Werte, let’s start easy — pain, fever, cough, atnerte issue, yenpe change, or fatigue nhenhe?",
+        "Ayenge nhenhe, when start arlke — getting worse or same akaltye?",
+        "Anwerne, severity now 1–10 nhenhe aye?",
+        "Werte, where body you feel it most akaltye?",
+        "Ayenge nhenhe, any red-flag signs — inwenge pain, trouble breathing, high fever, confusion, or fainting arlke?"
+      ],
+      "extension": {
+        "function": "",
+        "entities": false,
+        "responses": []
+      },
+      "context": {
+        "in": "CollectSymptoms",
+        "out": "GeneralFollowup",
+        "clear": false
+      },
+      "entityType": "NA",
+      "entities": []
+    }
+      ]
+    }
