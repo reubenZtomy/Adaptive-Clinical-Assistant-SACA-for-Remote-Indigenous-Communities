@@ -8,6 +8,7 @@ export default [
   route("login", "routes/login.tsx"),
   route("register", "routes/register.tsx"),
   route("profile", "routes/profile.tsx"),
+  route("history", "routes/history.tsx"),
   // Catch-all route for Chrome DevTools and other requests
   route("*", "routes/404.tsx"),
 ] satisfies RouteConfig;

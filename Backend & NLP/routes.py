@@ -3,7 +3,7 @@ from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash
 import models
-from models import User
+from models import User, Prediction
 import re
 
 # Create namespace for authentication
@@ -138,7 +138,7 @@ class Profile(Resource):
     def get(self):
         """Get current user profile"""
         try:
-            current_user_id = get_jwt_identity()
+            current_user_id = int(get_jwt_identity())
             print(f"Profile request for user ID: {current_user_id}")
             
             user = User.query.get(current_user_id)
@@ -158,7 +158,7 @@ class Profile(Resource):
     @auth_ns.marshal_with(user_model)
     def put(self):
         """Update user profile"""
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
         if not user:
@@ -196,10 +196,64 @@ class Verify(Resource):
     @jwt_required()
     def get(self):
         """Verify JWT token"""
-        current_user_id = get_jwt_identity()
+        current_user_id = int(get_jwt_identity())
         user = User.query.get(current_user_id)
         
         if not user:
             return {'message': 'Invalid token'}, 401
         
         return {'message': 'Token is valid', 'user': user.to_dict()}, 200
+
+# Prediction History endpoints
+@auth_ns.route('/predictions')
+class Predictions(Resource):
+    @jwt_required()
+    def get(self):
+        """Get user's prediction history"""
+        try:
+            current_user_id = int(get_jwt_identity())
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return {'message': 'User not found'}, 404
+            
+            # Get all predictions for the user, ordered by most recent first
+            predictions = Prediction.query.filter_by(user_id=current_user_id).order_by(Prediction.created_at.desc()).all()
+            
+            return {
+                'predictions': [pred.to_dict() for pred in predictions],
+                'count': len(predictions)
+            }, 200
+            
+        except Exception as e:
+            print(f"Error fetching predictions: {e}")
+            return {'message': f'Error fetching predictions: {str(e)}'}, 500
+
+@auth_ns.route('/predictions/<int:prediction_id>')
+class PredictionDetail(Resource):
+    @jwt_required()
+    def delete(self, prediction_id):
+        """Delete a specific prediction"""
+        try:
+            current_user_id = int(get_jwt_identity())
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return {'message': 'User not found'}, 404
+            
+            # Find the prediction and verify it belongs to the user
+            prediction = Prediction.query.filter_by(id=prediction_id, user_id=current_user_id).first()
+            
+            if not prediction:
+                return {'message': 'Prediction not found or access denied'}, 404
+            
+            # Delete the prediction
+            models.db.session.delete(prediction)
+            models.db.session.commit()
+            
+            return {'message': 'Prediction deleted successfully'}, 200
+            
+        except Exception as e:
+            print(f"Error deleting prediction: {e}")
+            models.db.session.rollback()
+            return {'message': f'Error deleting prediction: {str(e)}'}, 500

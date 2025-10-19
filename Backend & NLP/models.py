@@ -42,7 +42,7 @@ def create_models(database):
         
         def generate_token(self):
             """Generate JWT token for user"""
-            return create_access_token(identity=self.id)
+            return create_access_token(identity=str(self.id))
         
         def to_dict(self):
             """Convert user to dictionary"""
@@ -60,7 +60,45 @@ def create_models(database):
         def __repr__(self):
             return f'<User {self.username}>'
     
-    return User
+    class Prediction(db.Model):
+        __tablename__ = 'predictions'
+        
+        id = db.Column(db.Integer, primary_key=True)
+        user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+        prediction_text = db.Column(db.Text, nullable=False)
+        severity = db.Column(db.String(50), nullable=False)
+        language = db.Column(db.String(20), nullable=False)  # 'english' or 'arrernte'
+        mode = db.Column(db.String(20), nullable=False)  # 'text', 'voice', or 'images'
+        created_at = db.Column(db.DateTime, default=datetime.utcnow)
+        
+        # Additional fields for storing ML model results
+        ml1_result = db.Column(db.JSON, nullable=True)
+        ml2_result = db.Column(db.JSON, nullable=True)
+        fused_result = db.Column(db.JSON, nullable=True)
+        
+        # Relationship
+        user = db.relationship('User', backref=db.backref('predictions', lazy=True))
+        
+        def to_dict(self):
+            """Convert prediction to dictionary"""
+            return {
+                'id': self.id,
+                'user_id': self.user_id,
+                'prediction_text': self.prediction_text,
+                'severity': self.severity,
+                'language': self.language,
+                'mode': self.mode,
+                'created_at': self.created_at.isoformat() if self.created_at else None,
+                'ml1_result': self.ml1_result,
+                'ml2_result': self.ml2_result,
+                'fused_result': self.fused_result
+            }
+        
+        def __repr__(self):
+            return f'<Prediction {self.id} for User {self.user_id}>'
+    
+    return User, Prediction
 
-# Global User class will be set after create_models is called
+# Global classes will be set after create_models is called
 User = None
+Prediction = None

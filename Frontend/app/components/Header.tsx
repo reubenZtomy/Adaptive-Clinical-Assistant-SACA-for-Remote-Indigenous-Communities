@@ -94,16 +94,44 @@ export function Header() {
       py={2}
     >
       <HStack justify="space-between" maxW="7xl" mx="auto">
-        {/* Logo/Brand */}
+        {/* Left side - Logo */}
         <Link to="/">
           <Text fontSize="xl" fontWeight="bold" color="teal.500">
             SwinSACA
           </Text>
         </Link>
 
-        {/* Auth Buttons */}
-        <HStack spacing={2}>
-          {user ? (
+        {/* Right side - Navigation Links and Auth Buttons */}
+        <HStack spacing={4}>
+          <Button as={Link} to="/" variant="ghost" size="sm" colorScheme="teal">
+            Home
+          </Button>
+          
+          {user && (
+            <>
+              <Button
+                as={Link}
+                to="/history"
+                variant="outline"
+                size="sm"
+                colorScheme="teal"
+                leftIcon={<Text>📊</Text>}
+              >
+                View History
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                leftIcon={<FaSignOutAlt />}
+              >
+                Logout
+              </Button>
+            </>
+          )}
+          
+          <HStack spacing={2}>
+            {user ? (
             <HStack spacing={2}>
               <Box
                 w={8}
@@ -130,14 +158,6 @@ export function Header() {
               >
                 Profile
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                leftIcon={<FaSignOutAlt />}
-              >
-                Logout
-              </Button>
             </HStack>
           ) : (
             <>
@@ -160,7 +180,8 @@ export function Header() {
                 Register
               </Button>
             </>
-          )}
+            )}
+          </HStack>
         </HStack>
       </HStack>
     </Box>

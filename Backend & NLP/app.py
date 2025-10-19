@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, jwt_required, get_jwt_identity, decode_token
 from flask_cors import CORS
 from flask_restx import Api, Resource, fields
 from werkzeug.datastructures import FileStorage
@@ -108,8 +108,9 @@ api = Api(
 
 # Create models with the database instance
 import models
-User = models.create_models(db)
+User, Prediction = models.create_models(db)
 models.User = User
+models.Prediction = Prediction
 models.db = db
 
 # ---------------- Arrernte chatbot proxy config ----------------
@@ -120,6 +121,146 @@ from routes import auth_ns
 
 # Register namespaces
 api.add_namespace(auth_ns, path='/auth')
+
+# Create prediction history namespace
+prediction_ns = api.namespace('predictions', description='Prediction history operations')
+
+# Define models for prediction endpoints
+save_prediction_model = api.model('SavePrediction', {
+    'prediction_text': fields.String(required=True, description='The prediction text'),
+    'severity': fields.String(required=True, description='Severity level'),
+    'language': fields.String(required=True, description='Language used (english/arrernte)'),
+    'mode': fields.String(required=True, description='Mode used (text/voice/images)'),
+    'ml1_result': fields.Raw(description='ML1 model results'),
+    'ml2_result': fields.Raw(description='ML2 model results'),
+    'fused_result': fields.Raw(description='Fused model results')
+})
+
+@prediction_ns.route('/save')
+class SavePrediction(Resource):
+    @jwt_required()
+    @api.expect(save_prediction_model)
+    def post(self):
+        """Save a prediction for the current user"""
+        try:
+            current_user_id = int(get_jwt_identity())
+            user = User.query.get(current_user_id)
+            
+            if not user:
+                return {'message': 'User not found'}, 404
+            
+            data = request.get_json()
+            
+            # Create new prediction
+            prediction = Prediction(
+                user_id=current_user_id,
+                prediction_text=data['prediction_text'],
+                severity=data['severity'],
+                language=data['language'],
+                mode=data['mode'],
+                ml1_result=data.get('ml1_result'),
+                ml2_result=data.get('ml2_result'),
+                fused_result=data.get('fused_result')
+            )
+            
+            db.session.add(prediction)
+            db.session.commit()
+            
+            print(f"Prediction saved for user {user.username}: {prediction.id}")
+            return {'message': 'Prediction saved successfully', 'prediction_id': prediction.id}, 201
+            
+        except Exception as e:
+            print(f"Error saving prediction: {e}")
+            db.session.rollback()
+            return {'message': f'Error saving prediction: {str(e)}'}, 500
+
+# Register prediction namespace
+api.add_namespace(prediction_ns, path='/predictions')
+
+# Test endpoint to manually save a prediction
+@api.route('/test-save-prediction')
+class TestSavePrediction(Resource):
+    def post(self):
+        """Test endpoint to manually save a prediction"""
+        try:
+            # Create a test prediction
+            prediction = Prediction(
+                user_id=1,  # Use the existing user
+                prediction_text="Test prediction from manual endpoint",
+                severity="low",
+                language="english",
+                mode="text",
+                ml1_result={"test": "ml1"},
+                ml2_result={"test": "ml2"},
+                fused_result={"test": "fused"}
+            )
+            
+            db.session.add(prediction)
+            db.session.commit()
+            
+            return {'message': 'Test prediction saved successfully', 'prediction_id': prediction.id}, 201
+            
+        except Exception as e:
+            print(f"Error saving test prediction: {e}")
+            db.session.rollback()
+            return {'message': f'Error saving test prediction: {str(e)}'}, 500
+
+# Helper function to save prediction for logged-in users
+def save_prediction_if_logged_in(disease_prediction, prediction_text, language, mode, request_headers=None):
+    """Save prediction to database if user is logged in"""
+    print(f"[DEBUG] save_prediction_if_logged_in called with: prediction_text={prediction_text[:50]}..., language={language}, mode={mode}")
+    try:
+        # Check if user is logged in by looking for JWT token in headers
+        if not request_headers:
+            print("[DEBUG] No request headers provided")
+            return False
+            
+        auth_header = request_headers.get('Authorization')
+        print(f"[DEBUG] Auth header present: {bool(auth_header)}")
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("[DEBUG] No valid Authorization header found")
+            return False
+            
+        # Extract token and verify it
+        token = auth_header.split(' ')[1]
+        
+        try:
+            decoded_token = decode_token(token)
+            user_id = int(decoded_token['sub'])
+            
+            # Get severity from disease prediction
+            severity = "unknown"
+            if disease_prediction and isinstance(disease_prediction, dict):
+                if 'final' in disease_prediction and 'severity' in disease_prediction['final']:
+                    severity = disease_prediction['final']['severity']
+                elif 'ml1' in disease_prediction and 'severity' in disease_prediction['ml1']:
+                    severity = disease_prediction['ml1']['severity']
+            
+            # Create prediction record
+            prediction = Prediction(
+                user_id=user_id,
+                prediction_text=prediction_text,
+                severity=severity,
+                language=language,
+                mode=mode,
+                ml1_result=disease_prediction.get('ml1') if disease_prediction else None,
+                ml2_result=disease_prediction.get('ml2') if disease_prediction else None,
+                fused_result=disease_prediction.get('final') if disease_prediction else None
+            )
+            
+            db.session.add(prediction)
+            db.session.commit()
+            
+            print(f"Prediction saved for user {user_id}: {prediction.id}")
+            return True
+            
+        except Exception as e:
+            print(f"Error decoding token or saving prediction: {e}")
+            return False
+            
+    except Exception as e:
+        print(f"Error in save_prediction_if_logged_in: {e}")
+        return False
 
 # --- Chatbot core imports ---
 try:
@@ -1184,22 +1325,24 @@ class Chat(Resource):
                 fusion_resp = None
                 
                 
-                # Check for final message indicators in both English and Arrernte
+                # Check for final message indicators - be more specific to avoid false positives
                 final_message_indicators = [
-                    "summary", "assessment", "Thanks for the details",
-                    "arrule", "thanks", "thank you",  # Arrernte thanks
-                    "arnterre", "sick", "unwell", "ill"  # Arrernte medical terms that might indicate summary
+                    "Thanks for the details",  # Specific phrase
+                    "arrule",  # Arrernte thanks
+                    "arnterre"  # Arrernte medical terms that might indicate summary
                 ]
                 
-                is_final_detected = any(indicator in bot_reply_english.lower() for indicator in final_message_indicators)
+                # Only check for exact phrase matches, not partial word matches
+                is_final_detected = any(indicator.lower() in bot_reply_english.lower() for indicator in final_message_indicators)
                 
-                # Also check if the reply contains medical assessment keywords
+                # Also check if the reply contains medical assessment keywords - be more specific
                 medical_assessment_keywords = [
-                    "severity", "condition", "diagnosis", "recommendation", "doctor", "hospital",
+                    "diagnosis", "recommendation", "doctor", "hospital",
                     "urgent", "emergency", "treatment", "medication", "follow-up"
                 ]
                 
-                has_medical_assessment = any(keyword in bot_reply_english.lower() for keyword in medical_assessment_keywords)
+                # Only trigger if these keywords appear in a summary context, not in questions
+                has_medical_assessment = any(keyword in bot_reply_english.lower() for keyword in medical_assessment_keywords) and not bot_reply_english.strip().endswith('?')
                 
                 # Only check dialog state if we have a meaningful summary
                 # Don't trigger based on dialog state alone for follow-up questions
@@ -1251,6 +1394,15 @@ class Chat(Resource):
                     # Extract ml1/ml2 blocks if present (for convenience in your UI)
                     ml1_json = (fused_json or {}).get("ml1")
                     ml2_json = (fused_json or {}).get("ml2")
+                    
+                    # Save prediction for logged-in users
+                    save_prediction_if_logged_in(
+                        disease_prediction, 
+                        summary_text_for_prediction, 
+                        lang, 
+                        mode, 
+                        request.headers
+                    )
                 else:
                     print(f"[DEBUG] Not a final message - skipping ML model calls")
 
@@ -1459,8 +1611,13 @@ class Chat(Resource):
             ml2_json = None
             fused_json = None
 
+            print(f"[DEBUG] Checking final message conditions for voice input (Arrernte):")
+            print(f"   Arrernte reply: '{arr_reply}'")
+            print(f"   Contains 'summary': {'summary' in arr_reply.lower()}")
+            
             if isinstance(arr_reply, str) and ("summary" in arr_reply.lower()):
                 is_final_message = True
+                print(f"[DEBUG] Final message detected for voice input (Arrernte)!")
                 # Translate latest user input to English for the model summary
                 latest_en, _ = translate_arr_to_english_simple(user_msg_raw)
                 # Use Arr dialog_state to build the English summary inside predictor
@@ -1511,11 +1668,20 @@ class Chat(Resource):
         fused_json = None
         fusion_resp = None
         
+        print(f"[DEBUG] Checking final message conditions for text input:")
+        print(f"   Bot reply: '{bot_reply_english}'")
+        print(f"   Contains 'Summary': {'Summary' in bot_reply_english}")
+        print(f"   Contains 'summary:': {'summary:' in bot_reply_english.lower()}")
+        print(f"   Contains 'summary nhenhe': {'summary nhenhe' in bot_reply_english.lower()}")
+        
         if "Thanks—please tell me a bit more so I can assess this carefully" in bot_reply_english:
+            print(f"[DEBUG] Skipping - asking for more info")
             pass
         elif (("Summary" in bot_reply_english)
-              or ("summary:" in bot_reply_english.lower())):
+              or ("summary:" in bot_reply_english.lower())
+              or ("summary nhenhe" in bot_reply_english.lower())):
             is_final_message = True
+            print(f"[DEBUG] Final message detected for text input!")
             # Use the summary text from the bot reply for prediction, not the initial user message
             summary_text_for_prediction = bot_reply_english
             print(f"[DEBUG] Using summary text for prediction (text input): {summary_text_for_prediction}")
@@ -1538,6 +1704,16 @@ class Chat(Resource):
             ml2_json = (fused_json or {}).get("ml2")
         else:
             print(f"[DEBUG] Not a final message - skipping ML model calls (text input)")
+
+        # Save prediction for logged-in users (text input)
+        if is_final_message and disease_prediction:
+            save_prediction_if_logged_in(
+                disease_prediction, 
+                summary_text_for_prediction, 
+                lang, 
+                mode, 
+                request.headers
+            )
 
         return {
             "reply": final_reply,

@@ -19,6 +19,7 @@ export function Welcome() {
   const [btnIndex, setBtnIndex] = useState(0);
   const [arrernteStart, setArrernteStart] = useState<{word: string; audio: string | null}>({ word: "Arrernte", audio: null });
   const btnIndexRef = useRef(0);
+  const audioPlayingRef = useRef(false);
   const buttonTexts = [
     "Get Started",
     `Mpe!`,
@@ -37,27 +38,44 @@ export function Welcome() {
 
     // Dynamic TTS based on current text for heading/tagline and button
     const headingHover = () => {
+      if (audioPlayingRef.current) return;
       try {
+        audioPlayingRef.current = true;
         const audio = new Audio("/audio/welcome/Welcometitle.mp3");
-        audio.play().catch(() => {});
+        audio.play().catch(() => {}).finally(() => {
+          audioPlayingRef.current = false;
+        });
       } catch {}
     };
-    headingRef.current?.addEventListener("mouseenter", headingHover);
     const buttonHover = () => {
+      if (audioPlayingRef.current) return;
       try {
+        audioPlayingRef.current = true;
         const url = btnIndexRef.current === 1 ? "/audio/welcome/mpe.mp3" : "/audio/welcome/getstarted.mp3";
         const audio = new Audio(url);
-        audio.play().catch(() => {});
+        audio.play().catch(() => {}).finally(() => {
+          audioPlayingRef.current = false;
+        });
       } catch {}
     };
-    buttonRef.current?.addEventListener("mouseenter", buttonHover);
     const taglineHover = () => {
+      if (audioPlayingRef.current) return;
       try {
+        audioPlayingRef.current = true;
         const audio = new Audio("/audio/welcome/Welcomemessage.mp3");
-        audio.play().catch(() => {});
+        audio.play().catch(() => {}).finally(() => {
+          audioPlayingRef.current = false;
+        });
       } catch {}
     };
-    taglineRef.current?.addEventListener("mouseenter", taglineHover);
+
+    // Add event listeners with a small delay to ensure refs are set
+    const timeoutId = setTimeout(() => {
+      headingRef.current?.addEventListener("mouseenter", headingHover);
+      buttonRef.current?.addEventListener("mouseenter", buttonHover);
+      taglineRef.current?.addEventListener("mouseenter", taglineHover);
+    }, 100);
+
     loadArrernteDictionary().then((d) => {
       dictRef.current = d;
       const keys = ["start", "begin", "go", "come"];
@@ -74,6 +92,7 @@ export function Welcome() {
     });
     const id = window.setInterval(() => setBtnIndex((i) => (i + 1) % buttonTexts.length), 4000);
     return () => {
+      clearTimeout(timeoutId);
       headingRef.current?.removeEventListener("mouseenter", headingHover);
       buttonRef.current?.removeEventListener("mouseenter", buttonHover);
       taglineRef.current?.removeEventListener("mouseenter", taglineHover);
@@ -95,38 +114,7 @@ export function Welcome() {
     btnIndexRef.current = btnIndex;
   }, [btnIndex]);
   return (
-    <Box position="relative" minH="100dvh">
-      {/* Background image layer */}
-      <Box
-        position="fixed"
-        top={0}
-        left={0}
-        right={0}
-        bottom={0}
-        // Layered backgrounds: photo on top, soft gradient fallback beneath
-        bgImage={`url(${BG_URL}), linear-gradient(180deg, #e6f1ed 0%, #f3f7f9 100%)`}
-        bgSize="cover"
-        bgPos="center"
-        bgRepeat="no-repeat"
-        zIndex={0}
-      />
-      {/* Readability overlay (adjusts with light/dark) */}
-      <Box
-        position="fixed"
-        top={0}
-        left={0}
-        right={0}
-        bottom={0}
-        bg={isDark ? "blackAlpha.400" : "blackAlpha.300"}
-        zIndex={1}
-      />
-
-      <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center" position="relative" zIndex={2}>
-      <Box position="fixed" top={4} right={4}>
-          <IconButton aria-label="Toggle color mode" onClick={() => setIsDark((v) => !v)} variant="ghost" fontSize="2xl">
-          {isDark ? "☀️" : "🌙"}
-        </IconButton>
-      </Box>
+    <Container maxW="7xl" minH="100dvh" display="flex" alignItems="center" justifyContent="center">
       <Stack gap={12} align="center" textAlign="center" w="full" px={4}>
         <Box position="relative" minH={{ base: "auto", md: "unset" }}>
           <AnimatePresence mode="wait">
@@ -182,8 +170,8 @@ export function Welcome() {
         {!user && (
           <Box mt={8}>
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.5 }}>
-              <Text fontSize="sm" color="whiteAlpha.900" textShadow="0 1px 6px rgba(0,0,0,0.7)" mb={3}>
-                Want to save your progress and access personalized features?
+              <Text fontSize="sm" color={isDark ? "gray.300" : "gray.600"} mb={3}>
+                Want to save your details and view your prediction history? Please log in to access personalized features and track your medical assessments.
               </Text>
               <Stack direction="row" gap={3} justify="center">
                 <Link to="/login">

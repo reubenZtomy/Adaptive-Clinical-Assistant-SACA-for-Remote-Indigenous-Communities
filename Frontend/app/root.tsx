@@ -34,6 +34,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <style>
+          {`
+            html, body {
+              color-scheme: light !important;
+              background-color: white !important;
+            }
+            @media (prefers-color-scheme: dark) {
+              html, body {
+                color-scheme: light !important;
+                background-color: white !important;
+              }
+            }
+          `}
+        </style>
       </head>
       <body>
         <ChakraProvider value={system}>

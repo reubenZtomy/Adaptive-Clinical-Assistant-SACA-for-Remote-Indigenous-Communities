@@ -1,6 +1,6 @@
 import { Box, Button, Container, Flex, Heading, IconButton, Input, Stack, Text, VStack, HStack, Badge } from "@chakra-ui/react";
 import React, { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router";
+import { useLocation, useNavigate, Link } from "react-router";
 import { FaUserCircle, FaMicrophone, FaPause, FaPlay, FaExclamationTriangle, FaCheckCircle, FaInfoCircle, FaTimes, FaComments, FaHeart, FaGithub, FaLanguage, FaUserAlt, FaEye, FaDeaf, FaTooth, FaHeartbeat, FaStethoscope, FaHandPaper, FaShoePrints, FaBone, FaUserInjured, FaCheck, FaRobot, FaThumbtack } from "react-icons/fa";
 import logoLight from "../welcome/logo-light.svg";
 import { speakText, playAudioFeedback } from "../utils/tts";
@@ -15,14 +15,29 @@ type Message = { id: number; role: "user" | "assistant"; content: string; timest
 
 export default function Chat() {
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Initialize with default values to avoid SSR issues
   const [lang, setLang] = useState("english");
+  const [user, setUser] = useState<any>(null);
   const [mode, setMode] = useState("text");
   const [isDark, setIsDark] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [mounted, setMounted] = useState(false);
   const [input, setInput] = useState("");
+
+  // Load user from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (err) {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
+    }
+  }, []);
 
   const listRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -95,10 +110,10 @@ export default function Chat() {
     sessionStorage.setItem('swinsaca_language', lang);
     sessionStorage.setItem('swinsaca_mode', mode);
     
-    // If switching to Arrernte voice mode, update the welcome message and play audio
-    if (lang === "arrernte" && mode === "voice" && messages.length > 0) {
+    // If switching to Arrernte mode (voice or text), update the welcome message
+    if (lang === "arrernte" && (mode === "voice" || mode === "text") && messages.length > 0) {
       const welcomeMessage = "Werte! Ayenge SwinSACA, your AI medical assistant akaltye. Ayenge here to help arrantherre with health-related questions and give guidance arlke. How arrantherre feeling today nhenhe? What symptoms or concerns anwerne want to ileme atyenge akaltye?";
-      const welcomeAudioUrl = "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3";
+      const welcomeAudioUrl = mode === "voice" ? "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3" : undefined;
       
       // Update the first message (welcome message)
       setMessages(prevMessages => {
@@ -113,8 +128,8 @@ export default function Chat() {
         return updatedMessages;
       });
       
-      // Try to play welcome audio immediately when switching to Arrernte voice mode
-      if (welcomeAudioUrl && !isPlayingWelcomeAudio.current) {
+      // Try to play welcome audio immediately when switching to Arrernte voice mode only
+      if (mode === "voice" && welcomeAudioUrl && !isPlayingWelcomeAudio.current) {
         isPlayingWelcomeAudio.current = true;
         setTimeout(() => {
           const audio = new Audio(welcomeAudioUrl);
@@ -133,8 +148,8 @@ export default function Chat() {
             });
         }, 300);
       }
-    } else if (lang === "english" && mode === "voice" && messages.length > 0) {
-      // If switching to English voice mode, update to English welcome message
+    } else if (lang === "english" && (mode === "voice" || mode === "text") && messages.length > 0) {
+      // If switching to English mode (voice or text), update to English welcome message
       const welcomeMessage = "Hello! I'm SwinSACA, your AI medical assistant. I'm here to help you with health-related questions and provide guidance. How are you feeling today? What symptoms or concerns would you like to discuss?";
       
       setMessages(prevMessages => {
@@ -150,6 +165,7 @@ export default function Chat() {
       });
     }
   }, [lang, mode]);
+  
   
   // Handle settings from location state (when navigating from selection pages)
   useEffect(() => {
@@ -193,7 +209,7 @@ export default function Chat() {
       let welcomeMessage = "Hello! I'm SwinSACA, your AI medical assistant. I'm here to help you with health-related questions and provide guidance. How are you feeling today? What symptoms or concerns would you like to discuss?";
       let welcomeAudioUrl: string | undefined = undefined;
       
-      if (lang === "arrernte" && mode === "voice") {
+      if (lang === "arrernte" && (mode === "voice" || mode === "text")) {
         welcomeMessage = "Werte! Ayenge SwinSACA, your AI medical assistant akaltye. Ayenge here to help arrantherre with health-related questions and give guidance arlke. How arrantherre feeling today nhenhe? What symptoms or concerns anwerne want to ileme atyenge akaltye?";
         welcomeAudioUrl = "http://localhost:5000/static/audio/welcomeMessage_arrernte.mp3";
       }
@@ -206,7 +222,7 @@ export default function Chat() {
         audioUrl: welcomeAudioUrl
       }]);
       
-      // Try to play welcome audio immediately for Arrernte voice mode
+      // Try to play welcome audio immediately for Arrernte voice mode only
       if (lang === "arrernte" && mode === "voice" && welcomeAudioUrl && !isPlayingWelcomeAudio.current) {
         isPlayingWelcomeAudio.current = true;
         setTimeout(() => {
@@ -257,11 +273,8 @@ export default function Chat() {
 
   useEffect(() => {
     try {
-      // Preloader: if replying to last assistant message and non-image mode, show a short loader
-      const lastMsg = messages[messages.length - 1];
-      if (mode !== "images" && lastMsg && lastMsg.role === "assistant") {
-        startTimedLoader(4000);
-      }
+      // Preloader: only show for images mode or when there's actual processing delay
+      // Removed general loader for voice/text mode to avoid showing loader after every message
       const root = document.documentElement as HTMLElement;
       root.style.setProperty("--app-bg", isDark ? "#0f172a" : "#f9fafb");
       root.style.setProperty("--app-fg", isDark ? "#f8fafc" : "#1f2937");
@@ -501,14 +514,12 @@ export default function Chat() {
             ));
           }
           
-          // Preloader: if replying to last assistant message and non-image mode, show a short loader
-          const lastMsg = messages[messages.length - 1];
-          if (mode !== "images" && lastMsg && lastMsg.role === "assistant") {
-            startTimedLoader(4000);
-          }
+          // Preloader: only show for images mode or when there's actual processing delay
+          // Removed general loader for voice/text mode to avoid showing loader after every message
 
           // Check if this is a final message for disease prediction
           const isFinalMessage = data.is_final_message || false;
+          
           
           let reply: Message;
           if (isFinalMessage) {
@@ -1691,6 +1702,7 @@ export default function Chat() {
 
   return (
     <Container maxW="100%" minH="100vh" display="flex" flexDir="column" py={2} px={4} position="relative" {...contrastStyles}>
+
       {/* Audio Prompt for Arrernte Voice Mode */}
       {showAudioPrompt && lang === "arrernte" && mode === "voice" && (
         <Box

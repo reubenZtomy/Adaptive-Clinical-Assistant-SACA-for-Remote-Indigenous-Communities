@@ -169,13 +169,17 @@ export default function Mode() {
           </IconButton>
         </Box>
         <Stack gap={10} align="center" textAlign="center">
-          <Heading size="2xl" color="white" textShadow="0 2px 12px rgba(0,0,0,0.9)">How would you like to communicate?</Heading>
-          <Text fontSize={{ base: "xl", md: "2xl" }} color="whiteAlpha.900" textShadow="0 2px 8px rgba(0,0,0,0.6)">Select a mode below</Text>
+          <Heading size="2xl" color={isDark ? "gray.100" : undefined}>
+            {lang === "arrernte" ? "How would you like to communicate?" : "How would you like to communicate?"}
+          </Heading>
+          <Text fontSize={{ base: "xl", md: "2xl" }} color={isDark ? "gray.300" : "gray.600"}>
+            {lang === "arrernte" ? "Select a mode below" : "Select a mode below"}
+          </Text>
           <SimpleGrid mt={{ base: 12, md: 16 }} columns={{ base: 1, md: 3 }} gap={{ base: 10, md: 16 }} w="full">
             <Box 
               role="button" 
               onClick={() => handleMode("text")} 
-              onMouseEnter={() => audioLoaded && playHoverAudio("Text mode - Type your messages")}
+              onMouseEnter={() => audioLoaded && playHoverAudio(lang === "arrernte" ? "Text mode - Type your messages" : "Text mode - Type your messages")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
               borderRadius="2xl" 
@@ -190,14 +194,18 @@ export default function Mode() {
             >
               <Stack align="center" gap={3}>
                 <FaKeyboard size={48} />
-                <Heading size="xl">Text</Heading>
-                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Type your messages</Text>
+                <Heading size="xl">
+                  {lang === "arrernte" ? "Text – Ileme nhenhe akaltye" : "Text"}
+                </Heading>
+                <Text color={isDark ? "teal.200" : "teal.700"}>
+                  {lang === "arrernte" ? "Type your message arlke – ileme atyenge what arrantherre want to say akaltye." : "Type your messages"}
+                </Text>
               </Stack>
             </Box>
             <Box 
               role="button" 
               onClick={() => handleMode("voice")} 
-              onMouseEnter={() => audioLoaded && playHoverAudio("Voice mode - Speak with the assistant")}
+              onMouseEnter={() => audioLoaded && playHoverAudio(lang === "arrernte" ? "Voice mode - Speak with the assistant" : "Voice mode - Speak with the assistant")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
               borderRadius="2xl" 
@@ -212,14 +220,18 @@ export default function Mode() {
             >
               <Stack align="center" gap={3}>
                 <FaMicrophone size={48} />
-                <Heading size="xl">Voice</Heading>
-                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Speak with the assistant</Text>
+                <Heading size="xl">
+                  {lang === "arrernte" ? "Voice – Alheme nhenhe akaltye" : "Voice"}
+                </Heading>
+                <Text color={isDark ? "teal.200" : "teal.700"}>
+                  {lang === "arrernte" ? "Speak with assistant arlke – ileme atyenge through voice akaltye." : "Speak with the assistant"}
+                </Text>
               </Stack>
             </Box>
             <Box 
               role="button" 
               onClick={() => handleMode("images")} 
-              onMouseEnter={() => audioLoaded && playHoverAudio("Images mode - Share helpful pictures")}
+              onMouseEnter={() => audioLoaded && playHoverAudio(lang === "arrernte" ? "Images mode - Share helpful pictures" : "Images mode - Share helpful pictures")}
               onMouseLeave={() => stopCurrentAudio()}
               borderWidth="1px" 
               borderRadius="2xl" 
@@ -234,8 +246,12 @@ export default function Mode() {
             >
               <Stack align="center" gap={3}>
                 <FaImages size={48} />
-                <Heading size="xl">Images</Heading>
-                <Text color={isDark ? "whiteAlpha.800" : "teal.700"}>Share helpful pictures</Text>
+                <Heading size="xl">
+                  {lang === "arrernte" ? "Images – Akerte-akaltye pictures nhenhe" : "Images"}
+                </Heading>
+                <Text color={isDark ? "teal.200" : "teal.700"}>
+                  {lang === "arrernte" ? "Select pictures arlke relate to your symptom – akaltye choose photo arrantherre feel matches akiwarre." : "Share helpful pictures"}
+                </Text>
               </Stack>
             </Box>
           </SimpleGrid>
